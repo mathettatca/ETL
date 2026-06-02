@@ -167,4 +167,5 @@ dependencies = [
 [tool.uv.workspace]
 members = [
     "building_block",
+    "modules/data_access",
 ]
