@@ -217,3 +217,9 @@ __marimo__/
 .streamlit/secrets.toml
 building_block/src/building_block/infrastructure/mongo/base_mongo_repository.py
 uv.lock
+.vscode/settings.json
+building_block/logging/2026-05-31.txt
+building_block/logging/2026-06-01.txt
+building_block/logging/2026-06-02.txt
+building_block/logging/2026-06-03.txt
+building_block/logging/2026-06-04.txt
