@@ -1,6 +1,7 @@
 """API file model."""
 
-from building_block.core.domain.file_model import FileModel as BaseFileModel, FileSource
+from building_block.shared.enum import FileSource
+from building_block.core.domain.file_model import FileModel as BaseFileModel
 from pydantic import Field
 from typing import Optional
 

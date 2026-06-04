@@ -2,7 +2,7 @@ from typing import Any
 
 from bson import ObjectId
 
-from building_block.core.domain.file_model import FileDownloadStatus
+from building_block.shared.enum import FileDownloadStatus
 from building_block.core.domain.google_drive_file_model import GoogleDriveFile
 from building_block.utils.logging import log_error
 

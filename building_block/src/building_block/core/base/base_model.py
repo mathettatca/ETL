@@ -1,36 +1,16 @@
-"""Abstract base model for all models in the system."""
-
-from abc import ABC, abstractmethod
+"""Base model for all models in the system."""
 
 from pydantic import BaseModel
 
 
-class CustomBaseModel(ABC,BaseModel):
+class CustomBaseModel(BaseModel):
     """
-    Abstract base class for models that support conversion to/from document format.
-    Provides interface for persistence operations.
+    Base class for models that support conversion to/from document format.
     """
 
     @classmethod
-    @abstractmethod
     def _to_model(cls, doc: dict) -> "CustomBaseModel":
-        """
-        Convert a document dictionary to a model instance.
-        
-        Args:
-            doc: Dictionary representation of the document
-            
-        Returns:
-            Instance of the model class
-        """
-        pass
+        return cls.model_validate(doc)
 
-    @abstractmethod
     def _to_doc(self) -> dict:
-        """
-        Convert the model instance to a document dictionary.
-        
-        Returns:
-            Dictionary representation suitable for persistence
-        """
-        pass
+        return self.model_dump(mode="json")

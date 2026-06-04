@@ -1,24 +1,10 @@
 """Base file model for all file types in the system."""
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 from datetime import datetime
-from enum import Enum
 
 from building_block.core.base.base_model import CustomBaseModel
-
-
-class FileSource(str, Enum):
-    """Enumeration of available file sources."""
-
-    GOOGLE_DRIVE = "google_drive"
-    S3 = "s3"
-    API = "api"
-
-class FileDownloadStatus(str, Enum):
-    PENDING = "pending"
-    DOWNLOADING = "downloading"
-    SUCCESS = "success"
-    FAILED = "failed"    
+from building_block.shared.enum import FileDownloadStatus, FileSource
 
 
 class FileModel(CustomBaseModel):
@@ -39,9 +25,18 @@ class FileModel(CustomBaseModel):
     )
     original: FileSource = Field(..., description="Source of the file")
     download_status:FileDownloadStatus = FileDownloadStatus.PENDING
-    class Config:
-        frozen = True  # Immutable — Value Object behavior
-        json_schema_extra = {
+    spec: dict = Field(default_factory=dict, description="specify of source")
+
+    @classmethod
+    def _to_model(cls, doc: dict) -> "FileModel":
+        return cls.model_validate(doc)
+
+    def _to_doc(self) -> dict:
+        return self.model_dump(mode="json")
+
+    model_config = ConfigDict(
+        frozen=True,  # Immutable — Value Object behavior
+        json_schema_extra={
             "example": {
                 "file_id": "file_123",
                 "name": "document.pdf",
@@ -49,4 +44,5 @@ class FileModel(CustomBaseModel):
                 "date_download": "2024-01-02T12:30:00",
                 "original": "google_drive",
             }
-        }
+        },
+    )

@@ -3,8 +3,7 @@
 from pathlib import Path
 from typing import ClassVar
 
-from pydantic import ConfigDict
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 SRC_ROOT = PROJECT_ROOT / "src"
@@ -19,7 +18,7 @@ class AppBaseSetting(BaseSettings):
     PROJECT_ROOT: ClassVar[Path] = PROJECT_ROOT
     SRC_ROOT: ClassVar[Path] = SRC_ROOT
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),
         case_sensitive=False,
         extra="ignore"

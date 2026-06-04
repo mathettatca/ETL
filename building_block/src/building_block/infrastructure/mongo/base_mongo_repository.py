@@ -13,12 +13,11 @@ T = TypeVar("T", bound=CustomBaseModel)
 
 
 class BaseMongoRepository(BaseRepository[T], Generic[T]):
-    model: Type[T]
     collection_name: str
 
     def __init__(
         self,
-        model: Type[T],
+        model:Type[T],
         collection_name: str | None = None,
     ):
         self.model = model
@@ -57,7 +56,7 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
                 filter_options["_id"] = ObjectId(temp_id)
             else:
                 filter_options["_id"] = temp_id
-        info(filter_options)
+        info(json.dumps(filter_options))
         return filter_options
 
     def get(self, **filter_options) -> T | None:
@@ -69,7 +68,7 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
                 return self.model._to_model(raw)
             return None
         except errors.OperationFailure:
-            log_error("[%s] get failed: %s", self.model.__name__, filter_options)
+            log_error(f"[{self.model.__name__}] get failed: {filter_options}")
             return None
 
     def find_many(self, **filter_options) -> list[T]:
@@ -80,13 +79,14 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
             info(f"Length Result: {len(raws)}")
             for raw in raws:
                 info(f"Result: {json.dumps(raw,default=str)}")
-            return [
-                model
-                for raw in raws
-                if (model := self.model._to_model(raw)) is not None
-            ]
+            models: list[T] = []
+            for raw in raws:
+                model = self.model._to_model(raw)
+                if isinstance(model, self.model):
+                    models.append(model)
+            return models
         except errors.OperationFailure:
-            log_error("[%s] find_many failed: %s", self.model.__name__, filter_options)
+            log_error(f"[{self.model.__name__}] find_many failed: {filter_options}")
             return []
 
 
@@ -105,7 +105,7 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
             result = self._get_collection().insert_one(document)
             return result.inserted_id
         except errors.WriteError:
-            log_error("[%s] insert_one failed", self.model.__name__)
+            log_error(f"[{self.model.__name__}] insert_one failed")
             return None
 
     def insert_many(self, models: list[T]) -> bool:
@@ -123,7 +123,7 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
             self._get_collection().insert_many(documents)
             return True
         except (errors.WriteError, errors.BulkWriteError):
-            log_error("[%s] insert_many failed", self.model.__name__)
+            log_error(f"[{self.model.__name__}] insert_many failed")
             return False
 
     def update_one(self, update_model: T) -> bool:
@@ -154,7 +154,7 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
             )
             return result.modified_count > 0
         except errors.WriteError:
-            log_error("[%s] update_one failed", self.model.__name__)
+            log_error(f"[{self.model.__name__}] update_one failed")
             return False
 
     def delete_one(self, **filter_options) -> bool:
@@ -163,5 +163,5 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
             self._get_collection().delete_one(options)
             return True
         except errors.WriteError:
-            log_error("[%s] delete_one failed", self.model.__name__)
+            log_error(f"[{self.model.__name__}] delete_one failed")
             return False

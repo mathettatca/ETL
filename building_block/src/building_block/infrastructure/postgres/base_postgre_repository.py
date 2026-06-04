@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
+from io import StringIO
 import json
 from typing import Any, Generic, Sequence, Type, TypeVar
 
@@ -31,7 +32,6 @@ class BasePostgresRepository(BaseSqlRepository[T], Generic[T]):
         self,
         model: Type[T],
         table_name: str | None = None,
-        primary_key_name: str = "id",
     ) -> None:
         self.model = model
         self.table_name = table_name or getattr(model, "table_name", "")
@@ -42,19 +42,42 @@ class BasePostgresRepository(BaseSqlRepository[T], Generic[T]):
 
     
     def insert(self, data:pd.DataFrame | T | Sequence[T]):
-        cols :str = None
+        cols :str  = None
         sql :str= None
         values = []
 
         if isinstance(data,pd.DataFrame):
-           cols = ", ".join(data.columns)
-           sql = f"INSERT INTO {self.table_name} ({cols}) VALUES %s"
-           values = list(data.itertuples(index=False,name=False))
+            if data.empty:
+                return 0
+
+            # StringIO là file-like object nằm trong RAM
+            # newline="" tốt hơn newline=" "
+            buffer = StringIO(newline="")
+
+            # Ghi DataFrame thành CSV vào buffer
+            data.to_csv(buffer, index=False, header=True)
+
+            # Đưa con trỏ buffer về đầu file
+            buffer.seek(0)
+
+            copy_sql = sql.SQL("""
+                COPY {} ({})
+                FROM STDIN
+                WITH (FORMAT CSV, HEADER TRUE)
+            """).format(
+                sql.Identifier(self.table_name),
+                sql.SQL(", ").join(sql.Identifier(column) for column in data.columns),
+            )
+
+            with self.client.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.copy_expert(copy_sql, buffer)
+                conn.commit()
 
         elif isinstance(data, self.model):
             with self.client.get_connection() as conn:
                 with conn.cursor() as cursor:
-                    dump = data.model_dump()
+                    dump = data._to_model()
                     cols = ", ".join(dump.keys())
                     vals = tuple(dump.values())
                     placeholders = ", ".join(["%s"] * len(dump))
