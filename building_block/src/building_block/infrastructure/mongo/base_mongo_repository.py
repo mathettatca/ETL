@@ -1,7 +1,8 @@
 import json
 from typing import Any, Generic, Type, TypeVar
 
-from bson import ObjectId, errors
+from bson import ObjectId
+from pymongo.errors import BulkWriteError, OperationFailure, WriteError
 from building_block.core.base.base_nosql_repository import BaseNoSqlRepository as BaseRepository
 from building_block.infrastructure.mongo.client import MongoDBClientProxy
 from pymongo.collection import Collection
@@ -63,11 +64,11 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
         try:
             filter_options = self._normalize_filter_options(filter_options)
             info(json.dumps(filter_options,default=str))
-            raw = self._get_collection().get(filter_options)
+            raw = self._get_collection().find_one(filter_options)
             if raw != None:
                 return self.model._to_model(raw)
             return None
-        except errors.OperationFailure:
+        except OperationFailure:
             log_error(f"[{self.model.__name__}] get failed: {filter_options}")
             return None
 
@@ -85,7 +86,7 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
                 if isinstance(model, self.model):
                     models.append(model)
             return models
-        except errors.OperationFailure:
+        except OperationFailure:
             log_error(f"[{self.model.__name__}] find_many failed: {filter_options}")
             return []
 
@@ -102,9 +103,10 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
         """
         try:
             document = model._to_doc()
+            info(f"[mongo_repository_insert_one] document: {document}")
             result = self._get_collection().insert_one(document)
             return result.inserted_id
-        except errors.WriteError:
+        except WriteError:
             log_error(f"[{self.model.__name__}] insert_one failed")
             return None
 
@@ -122,7 +124,7 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
             documents = [model._to_doc() for model in models]
             self._get_collection().insert_many(documents)
             return True
-        except (errors.WriteError, errors.BulkWriteError):
+        except (WriteError, BulkWriteError):
             log_error(f"[{self.model.__name__}] insert_many failed")
             return False
 
@@ -139,6 +141,8 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
         try:
             document = update_model._to_doc()
             file_id = document.pop("_id", document.pop("file_id", None))
+            if file_id is None:
+                file_id = getattr(update_model, "file_id", None)
             
             if file_id is None:
                 log_error(f"[{self.model.__name__}] update_one failed: no ID found")
@@ -153,7 +157,7 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
                 {"$set": document}
             )
             return result.modified_count > 0
-        except errors.WriteError:
+        except WriteError:
             log_error(f"[{self.model.__name__}] update_one failed")
             return False
 
@@ -162,6 +166,6 @@ class BaseMongoRepository(BaseRepository[T], Generic[T]):
         try:
             self._get_collection().delete_one(options)
             return True
-        except errors.WriteError:
+        except WriteError:
             log_error(f"[{self.model.__name__}] delete_one failed")
             return False

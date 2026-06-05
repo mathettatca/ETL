@@ -25,14 +25,6 @@ class FileModel(CustomBaseModel):
     )
     original: FileSource = Field(..., description="Source of the file")
     download_status:FileDownloadStatus = FileDownloadStatus.PENDING
-    spec: dict = Field(default_factory=dict, description="specify of source")
-
-    @classmethod
-    def _to_model(cls, doc: dict) -> "FileModel":
-        return cls.model_validate(doc)
-
-    def _to_doc(self) -> dict:
-        return self.model_dump(mode="json")
 
     model_config = ConfigDict(
         frozen=True,  # Immutable — Value Object behavior

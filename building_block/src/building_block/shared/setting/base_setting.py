@@ -19,7 +19,7 @@ class AppBaseSetting(BaseSettings):
     SRC_ROOT: ClassVar[Path] = SRC_ROOT
 
     model_config = SettingsConfigDict(
-        env_file=str(PROJECT_ROOT / ".env"),
+        env_file=str(PROJECT_ROOT /"env"/".env"),
         case_sensitive=False,
         extra="ignore"
     )
