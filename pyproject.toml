@@ -168,4 +168,5 @@ dependencies = [
 members = [
     "building_block",
     "modules/data_access",
+    "modules/data_loader",
 ]

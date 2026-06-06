@@ -1,4 +1,4 @@
-from application.base.base_response import BaseResponse
+from data_access.application.base.base_response import BaseResponse
 
 
 class AuditFileDownloadCommandResponse(BaseResponse):

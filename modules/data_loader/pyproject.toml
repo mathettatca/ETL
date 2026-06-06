@@ -1,11 +1,19 @@
 [project]
-name = "data-access"
+name = "data-loader"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "building-block",
+    "google-api-python-client>=2.196.0",
+    "google-auth-httplib2>=0.4.0",
+    "google-auth-oauthlib>=1.4.0",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.1",
+    "pymongo>=4.17.0",
+    "python-dotenv>=1.2.2",
+    "data-access",
 ]
 
 [build-system]
@@ -14,7 +22,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["data_access*"]
+include = ["data_loader*"]
 
 [tool.uv.sources]
 building-block = { workspace = true }
+data-access = { workspace = true }

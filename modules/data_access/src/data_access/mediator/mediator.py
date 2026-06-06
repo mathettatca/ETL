@@ -1,6 +1,6 @@
 from typing import Any
 
-from application.base.base_request import BaseRequest
+from data_access.application.base.base_request import BaseRequest
 
 
 class Mediator:

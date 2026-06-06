@@ -1,17 +1,17 @@
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from application.base.base_handler import BaseRequestHandler
-from application.base.base_request import BaseRequest
-from application.request.commands.audit_file_download.audit_file_download_command import (
+from data_access.application.base.base_handler import BaseRequestHandler
+from data_access.application.base.base_request import BaseRequest
+from data_access.application.request.commands.audit_file_download.audit_file_download_command import (
     AuditFileDownloadCommand,
     AuditFileDownloadCommandHandler,
 )
-from application.request.commands.save_hs_raw_data.save_hs_raw_data_command import (
+from data_access.application.request.commands.save_hs_raw_data.save_hs_raw_data_command import (
     SaveHsRawDataCommand,
     SaveHsRawDataCommandHandler,
 )
-from mediator.mediator import Mediator
+from data_access.mediator.mediator import Mediator
 
 
 TRequest = TypeVar("TRequest", bound=BaseRequest)

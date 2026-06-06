@@ -3,12 +3,12 @@ from typing import ClassVar
 import pandas as pd
 from pydantic import ConfigDict
 
-from adapter.ports.hs_raw_data_repository_port import HsRawDataRepositoryPort
-from adapter.postgres_hs_raw_data_repository_adapter import (
+from data_access.adapter.ports.hs_raw_data_repository_port import HsRawDataRepositoryPort
+from data_access.adapter.postgres_hs_raw_data_repository_adapter import (
     PostgresHsRawDataRepositoryAdapter,
 )
-from application.base.base_handler import BaseRequestHandler
-from application.base.base_response import BaseResponse
+from data_access.application.base.base_handler import BaseRequestHandler
+from data_access.application.base.base_response import BaseResponse
 from building_block.core.domain.hs_raw_data_model import HsRawDataModel
 from ..base_command import Command
 
