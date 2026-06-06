@@ -237,4 +237,4 @@ uv.lock
 .agents/PLAN_REMOVE_CALLER_MODULE_BASE_REQUEST.md
 .agents/PLAN_REMOVE_MEDIATOR_PIPELINE.md
 building_block/
-google_tokens/
+modules/data_loader/google_tokens/
