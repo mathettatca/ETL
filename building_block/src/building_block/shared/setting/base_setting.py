@@ -5,7 +5,7 @@ from typing import ClassVar
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
+PROJECT_ROOT = Path(__file__).resolve().parents[5]
 SRC_ROOT = PROJECT_ROOT / "src"
 
 class AppBaseSetting(BaseSettings):

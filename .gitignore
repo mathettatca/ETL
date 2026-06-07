@@ -215,7 +215,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-building_block/src/building_block/infrastructure/mongo/base_mongo_repository.py
+
 uv.lock
 .vscode/settings.json
 building_block/logging/2026-05-31.txt
@@ -236,5 +236,7 @@ uv.lock
 .agents/PLAN_REMOVE_AUDIT_SERVICE_PORT.md
 .agents/PLAN_REMOVE_CALLER_MODULE_BASE_REQUEST.md
 .agents/PLAN_REMOVE_MEDIATOR_PIPELINE.md
-building_block/
 modules/data_loader/google_tokens/
+building_block/google_tokens/
+logging/
+test/data
