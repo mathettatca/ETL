@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from building_block.shared.setting.base_setting import AppBaseSetting
+from building_block.utils.project_paths import PROJECT_ROOT
 
 
 class CustomFormatter(logging.Formatter):
@@ -24,7 +25,7 @@ class CustomFormatter(logging.Formatter):
 
 # Create logger instance
 _logger = logging.getLogger("sts_data_ingestion")
-_log_dir =AppBaseSetting.PROJECT_ROOT / "logging"
+_log_dir =PROJECT_ROOT / "logging"
 _log_file = _log_dir / f"{datetime.now().strftime('%Y-%m-%d')}.txt"
 
 # Prevent duplicate handlers

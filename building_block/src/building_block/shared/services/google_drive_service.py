@@ -11,7 +11,6 @@ from google.oauth2.service_account import Credentials as ServiceAccountCredentia
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-import io
 from tqdm import tqdm
 
 from building_block.utils.logging import info, log_success
@@ -41,22 +40,11 @@ class GoogleDriveService:
 
         try:
             setting = GoogleDriveSetting()
-
-            # Verify credentials file exists
-            if not os.path.exists(setting.google_credentials_path):
-                raise FileNotFoundError(
-                    f"Google credentials file not found: {setting.google_credentials_path}"
-                )
-
-            creds = self._load_credentials(setting.google_credentials_path)
+            cred_path = setting.google_credentials_path
+            creds = self._load_credentials(cred_path)
             self._service = build("drive", "v3", credentials=creds)
             self._initialized = True
             log_success("Connected to Google Drive API successfully")
-        except ImportError:
-            raise ImportError(
-                "Google Drive API libraries not installed. "
-                "Install: pip install google-auth-httplib2 google-api-python-client"
-            )
         except Exception as e:
             raise RuntimeError(f"Failed to initialize Google Drive service: {e}")
 
@@ -139,13 +127,6 @@ class GoogleDriveService:
             file_name = file_metadata.get("name", "Unknown")
 
             request = self.service.files().get_media(fileId=file_id)
-
-            # Create destination directory
-            is_exist = os.path.exists(dest_path)
-            info(f"FIle {dest_path} is exist return path only ")
-            if is_exist == True:
-               info(f"File {dest_path} already exists, return path only")
-               return dest_path    
              
             os.makedirs(os.path.dirname(dest_path) or ".", exist_ok=True)
 
@@ -258,15 +239,4 @@ class GoogleDriveService:
         cls._service = None
 
 
-class GoogleDriveServiceProxy:
-    """Lazy proxy that initializes the Google Drive service only on first use."""
-
-    def __getattr__(self, name: str):
-        return getattr(GoogleDriveService(), name)
-
-    def reset(self) -> None:
-        GoogleDriveService.reset()
-
-
 # Convenient global reference
-google_drive_service = GoogleDriveServiceProxy()

@@ -9,11 +9,11 @@ caller
   -> data_loader.run_data_loader(file_source, dest_path, **params)
   -> DownloaderDispatcher.get_file_info(file_source, **params)
   -> DownloaderDispatcher.download(file, dest_path, **params)
-  -> for each DownloadResponse: data_access mediator.send(AuditFileDownloadCommand)
-  -> list[dict] JSON-safe
+  -> for each FileModel: data_access mediator.send(AuditFileDownloadCommand)
+  -> list[FileModel]
 ```
 
-Ket qua return la list dict JSON-safe, duoc tao tu `_to_doc()` cua response model noi bo.
+Ket qua return la list domain model, vi du `GoogleDriveFile` cho source Google Drive.
 Audit file download duoc goi sau khi download xong. Neu mot phan audit fail,
 flow van return ket qua download; chi raise khi tat ca audit command deu fail.
 
@@ -45,8 +45,8 @@ modules/data_loader/
 
 | Layer | Trach nhiem |
 |-------|-------------|
-| `src/data_loader/entrypoints.py` | Nhan tham so tu caller, parse `file_source`, goi dispatcher, return JSON-safe dict. |
-| `src/data_loader/applications/models` | DTO noi bo cho ket qua download. |
+| `src/data_loader/entrypoints.py` | Nhan tham so tu caller, parse `file_source`, goi dispatcher, map `FileModel` sang audit command va return model. |
+| `src/data_loader/applications/models` | DTO noi bo cu, khong con la output chinh cua Google Drive downloader. |
 | `src/data_loader/applications/services/downloaders/ports` | Contract `Downloader` cho moi source downloader. |
 | `src/data_loader/applications/services/downloaders/adapters` | Dispatcher registry va downloader implementation cu the. |
 | `building_block` | Shared domain model, enum, setting, logging, Google Drive service va file service. |
@@ -67,12 +67,13 @@ Vi du return:
 
 ```python
 [
-    {
-        "id": "1da6amH_Hd9oj1elZaWcc9Ptfah1JiA42",
-        "file_id": "1da6amH_Hd9oj1elZaWcc9Ptfah1JiA42",
-        "local_path": "downloads/google_drive/data.csv",
-        "file_download_status": "success",
-    }
+    GoogleDriveFile(
+        name="data.csv",
+        dest_path="downloads/google_drive/data.csv",
+        drive_file_id="1da6amH_Hd9oj1elZaWcc9Ptfah1JiA42",
+        mime_type="text/csv",
+        download_status=FileDownloadStatus.SUCCESS,
+    )
 ]
 ```
 
@@ -80,7 +81,7 @@ Vi du return:
 
 1. Tao downloader moi implement contract `Downloader`.
 2. Implement `get_file_info(...)` de lay metadata va build `FileModel` phu hop.
-3. Implement `download(file, dest_path, **kwargs)` de tai file va tra list response model.
+3. Implement `download(file, dest_path, **kwargs)` de tai file va tra list domain file model.
 4. Register downloader moi trong `DownloaderDispatcher.regist_all()`.
 5. Caller truyen `file_source` va params cua source moi vao `run_data_loader(...)`.
 

@@ -11,8 +11,6 @@ from data_access.application.request.commands.save_hs_raw_data.save_hs_raw_data_
     SaveHsRawDataCommand,
     SaveHsRawDataCommandHandler,
 )
-from data_access.mediator.mediator import Mediator
-
 
 TRequest = TypeVar("TRequest", bound=BaseRequest)
 HandlerFactory = type[BaseRequestHandler[Any, Any]] | Callable[[], BaseRequestHandler[Any, Any]]
@@ -43,6 +41,3 @@ def build_data_access_registry() -> MediatorRegistry:
     return registry
 
 
-def build_data_access_mediator() -> Mediator:
-    registry = build_data_access_registry()
-    return Mediator(registry=registry)

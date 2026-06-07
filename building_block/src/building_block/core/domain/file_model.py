@@ -20,14 +20,18 @@ class FileModel(CustomBaseModel):
     date_download: datetime | None = Field(
         default=None, description="Download timestamp"
     )
+    date_update: datetime | None = Field(
+        default=None, description="Download timestamp"
+    )
     dest_path:str | None = Field(
         default= None, description="Local path"
     )
     original: FileSource = Field(..., description="Source of the file")
-    download_status:FileDownloadStatus = FileDownloadStatus.PENDING
+    download_status:FileDownloadStatus = Field(
+        default=FileDownloadStatus.PENDING, description="Download status"
+    )
 
     model_config = ConfigDict(
-        frozen=True,  # Immutable — Value Object behavior
         json_schema_extra={
             "example": {
                 "file_id": "file_123",

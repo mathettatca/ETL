@@ -6,3 +6,4 @@ class FileDownloadStatus(str, Enum):
     DOWNLOADING = "downloading"
     SUCCESS = "success"
     FAILED = "failed"
+    UPDATE = "update"

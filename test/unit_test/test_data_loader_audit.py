@@ -1,22 +1,23 @@
+from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
 
-from application.request.commands.audit_file_download.audit_file_download_command import (
+from data_access.application.request.commands.audit_file_download.audit_file_download_command import (
     AuditFileDownloadCommand,
 )
-from building_block.core.domain.file_model import FileDownloadStatus, FileSource
-from data_loader.applications.models import DownloadResponse
+from building_block.core.domain.file_model import FileDownloadStatus, FileModel, FileSource
+from building_block.core.domain.google_drive_file_model import GoogleDriveFile
 from data_loader import entrypoints
 
 
 class FakeDispatcher:
-    responses: list[DownloadResponse] = []
+    responses: list[FileModel] = []
 
     def get_file_info(self, source: FileSource, **kwargs):
         return SimpleNamespace(original=source)
 
-    def download(self, file, dest_path: str, **kwargs) -> list[DownloadResponse]:
+    def download(self, file, dest_path: str, **kwargs) -> list[FileModel]:
         return self.responses
 
 
@@ -35,30 +36,33 @@ class FakeMediator:
 
 def build_response(
     file_id: str = "drive-file-id",
-    file_name: str | None = "audit.csv",
-    mime_type: str | None = "text/csv",
-) -> DownloadResponse:
-    return DownloadResponse(
-        id=file_id,
-        file_path="/tmp/audit.csv",
-        file_download_status=FileDownloadStatus.SUCCESS,
-        file_name=file_name,
+    file_name: str = "audit.csv",
+    mime_type: str = "text/csv",
+    dest_path: str | None = "/tmp/audit.csv",
+) -> GoogleDriveFile:
+    return GoogleDriveFile(
+        name=file_name,
+        date_create=datetime(2026, 6, 7, 0, 0, 0),
+        date_download=datetime(2026, 6, 7, 1, 0, 0),
+        dest_path=dest_path,
+        download_status=FileDownloadStatus.SUCCESS,
+        drive_file_id=file_id,
         mime_type=mime_type,
-        size=2048,
+        size_bytes=2048,
     )
 
 
-def patch_loader(monkeypatch, responses: list[DownloadResponse], mediator: FakeMediator):
+def patch_loader(monkeypatch, responses: list[FileModel], mediator: FakeMediator):
     FakeDispatcher.responses = responses
-    build_calls = []
+    mediator_calls = []
 
-    def fake_build_mediator():
-        build_calls.append(True)
+    def fake_mediator():
+        mediator_calls.append(True)
         return mediator
 
     monkeypatch.setattr(entrypoints, "DownloaderDispatcher", FakeDispatcher)
-    monkeypatch.setattr(entrypoints, "build_data_access_mediator", fake_build_mediator)
-    return build_calls
+    monkeypatch.setattr(entrypoints, "Mediator", fake_mediator)
+    return mediator_calls
 
 
 def test_run_data_loader_sends_audit_command_for_each_response(monkeypatch):
@@ -67,7 +71,7 @@ def test_run_data_loader_sends_audit_command_for_each_response(monkeypatch):
         build_response(file_id="drive-file-2", file_name="b.csv"),
     ]
     mediator = FakeMediator()
-    build_calls = patch_loader(monkeypatch, responses, mediator)
+    mediator_calls = patch_loader(monkeypatch, responses, mediator)
 
     result = entrypoints.run_data_loader(
         file_source="google_drive",
@@ -75,9 +79,9 @@ def test_run_data_loader_sends_audit_command_for_each_response(monkeypatch):
         file_id="folder-id",
     )
 
-    assert len(build_calls) == 1
+    assert len(mediator_calls) == 1
     assert len(mediator.sent) == 2
-    assert result == [response._to_doc() for response in responses]
+    assert result == responses
 
     first = mediator.sent[0]
     assert isinstance(first, AuditFileDownloadCommand)
@@ -105,7 +109,7 @@ def test_run_data_loader_returns_when_audit_partially_fails(monkeypatch):
     )
 
     assert len(mediator.sent) == 2
-    assert result == [response._to_doc() for response in responses]
+    assert result == responses
 
 
 def test_run_data_loader_raises_when_all_audits_fail(monkeypatch):
@@ -128,9 +132,9 @@ def test_run_data_loader_raises_when_all_audits_fail(monkeypatch):
 
 def test_run_data_loader_rejects_missing_audit_metadata(monkeypatch):
     mediator = FakeMediator()
-    patch_loader(monkeypatch, [build_response(file_name=None)], mediator)
+    patch_loader(monkeypatch, [build_response(dest_path=None)], mediator)
 
-    with pytest.raises(ValueError, match="file_name is required"):
+    with pytest.raises(ValueError, match="dest_path is required"):
         entrypoints.run_data_loader(
             file_source="google_drive",
             dest_path="/tmp",

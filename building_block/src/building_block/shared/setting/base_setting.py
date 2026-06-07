@@ -5,8 +5,7 @@ from typing import ClassVar
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-PROJECT_ROOT = Path(__file__).resolve().parents[5]
-SRC_ROOT = PROJECT_ROOT / "src"
+from building_block.utils.project_paths import ENV_PATH
 
 class AppBaseSetting(BaseSettings):
     """
@@ -15,11 +14,8 @@ class AppBaseSetting(BaseSettings):
     Subclasses only need to declare fields.
     """
 
-    PROJECT_ROOT: ClassVar[Path] = PROJECT_ROOT
-    SRC_ROOT: ClassVar[Path] = SRC_ROOT
-
     model_config = SettingsConfigDict(
-        env_file=str(PROJECT_ROOT /"env"/".env"),
+        env_file=ENV_PATH,
         case_sensitive=False,
         extra="ignore"
     )

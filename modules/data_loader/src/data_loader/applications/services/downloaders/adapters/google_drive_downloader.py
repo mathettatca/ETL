@@ -5,114 +5,80 @@ from datetime import datetime
 
 from building_block.core.domain.file_model import FileDownloadStatus
 from building_block.core.domain.google_drive_file_model import GoogleDriveFile
-from building_block.shared.services.filer_service.adapters.google_drive_file_service import (
-    GoogleDriveFileService,
-)
-from building_block.shared.services.filer_service.ports.IFIleService import (
-    IFileService,
-)
-from building_block.shared.services.google_drive_service import GoogleDriveServiceProxy
 from building_block.utils.file_utils import resolve_file_dest_path
 from building_block.utils.logging import debug, info, log_error, log_success
 from building_block.utils.mappers import GoogleDriveFileMapper
-
-from data_loader.applications.models import DownloadResponse
 
 
 class GoogleDriveDownloader:
     """Downloader implementation for Google Drive."""
 
     def __init__(self) -> None:
-        self.db_file_service: IFileService[GoogleDriveFile] = GoogleDriveFileService()
-        self.service = GoogleDriveServiceProxy()
+        from building_block.shared.services.google_drive_service import GoogleDriveService
+
+        self.service = GoogleDriveService()
 
     def download(
         self,
         file: GoogleDriveFile,
         dest_path: str,
         **kwargs,
-    ) -> list[DownloadResponse]:
+    ) -> list[GoogleDriveFile]:
         local_path = resolve_file_dest_path(file.name, dest_path)
-        responses: list[DownloadResponse] = []
-        self._download_handler(file, local_path, responses)
-        return responses
+        info(f"[Google Drive Downloader] Download Folder localPath: {local_path}")
+        downloaded_files: list[GoogleDriveFile] = []
+        self._download_handler(file, local_path, downloaded_files)
+        return downloaded_files
 
     def _download_handler(
         self,
-        file_model: GoogleDriveFile,
+        gdrive_file: GoogleDriveFile,
         dest_path: str,
-        responses: list[DownloadResponse],
-    ) -> str | None:
-        if file_model.mime_type == "application/vnd.google-apps.folder":
+        downloaded_files: list[GoogleDriveFile],
+    ) -> GoogleDriveFile | None:
+        if gdrive_file.mime_type == "application/vnd.google-apps.folder":
             os.makedirs(dest_path, exist_ok=True)
-            files_metadata = self.service.list_files(file_id=file_model.drive_file_id)
+            files_metadata = self.service.list_files(file_id=gdrive_file.drive_file_id)
 
             for child_metadata in files_metadata:
                 child_file = GoogleDriveFileMapper.to_model(child_metadata)
                 child_dest_path = os.path.join(dest_path, child_file.name)
-                self._download_handler(child_file, child_dest_path, responses)
+                self._download_handler(child_file, child_dest_path, downloaded_files)
 
-            log_success(f"Downloaded folder {file_model.name} to {dest_path}")
-            return dest_path
-
-        if not file_model.name.lower().endswith(".csv"):
-            info(f"Skip non-xlsx file: {file_model.name}")
+            log_success(f"Downloaded folder {gdrive_file.name} to {dest_path}")
             return None
 
+        local_file = gdrive_file.model_dump()
+        file_existed_before_download = os.path.exists(dest_path)
+        info(f"[Google Drive Downloader]: local_path :{dest_path}")
         try:
-            local_path = dest_path
-            if not os.path.exists(local_path):
-                local_path = self.service.download_file(
-                    file_model.drive_file_id,
-                    local_path,
-                )
-                info("Convert Data to Model")
-                file_response: GoogleDriveFile = file_model.model_copy(
-                    update={
-                        "dest_path": local_path,
-                        "date_download": datetime.now(),
-                        "download_status": FileDownloadStatus.SUCCESS,
-                    }
-                )
-                info(f"Finish download file {file_model.name}")
-                self.db_file_service.save(file_response)
-
-            responses.append(
-                DownloadResponse(
-                    id=file_model.drive_file_id or "",
-                    file_path=local_path,
-                    file_download_status=FileDownloadStatus.SUCCESS,
-                    file_name=file_model.name,
-                    mime_type=file_model.mime_type,
-                    size=file_model.size_bytes,
-                )
+            local_path = self.service.download_file(
+                gdrive_file.drive_file_id,
+                dest_path,
             )
+            local_file["dest_path"] = local_path
+            if file_existed_before_download:
+                local_file["download_status"] = FileDownloadStatus.UPDATE
+                local_file["date_update"] = datetime.now()
+            else:
+                local_file["download_status"] = FileDownloadStatus.SUCCESS
+                local_file["date_download"] = datetime.now()
+
+            file_response = GoogleDriveFile(**local_file)
             log_success(
-                f"Downloaded file {file_model.name} from Google Drive to {local_path}"
+                f"Downloaded file {gdrive_file.name} from Google Drive to {local_path}"
             )
-            return local_path
+            return file_response
         except Exception as e:
-            file_response = file_model.model_copy(
-                update={
-                    "date_download": datetime.now(),
-                    "download_status": FileDownloadStatus.FAILED,
-                }
-            )
-            debug(f"Failed to download file {file_model.name}: {str(e)}")
-            self.db_file_service.save(file_response)
-
-            responses.append(
-                DownloadResponse(
-                    id=file_model.drive_file_id or "",
-                    file_path="",
-                    file_download_status=FileDownloadStatus.FAILED,
-                    file_name=file_model.name,
-                    mime_type=file_model.mime_type,
-                    size=file_model.size_bytes,
-                )
-            )
-            log_error(f"Failed to download file {file_model.name}: {str(e)}")
-            return None
+            local_file["dest_path"] = dest_path
+            local_file["date_download"] = datetime.now()
+            local_file["download_status"] = FileDownloadStatus.FAILED
+            file_response = GoogleDriveFile(**local_file)
+            debug(f"Failed to download file {gdrive_file.name}: {str(e)}")
+            log_error(f"Failed to download file {gdrive_file.name}: {str(e)}")
+            return file_response
+        finally:
+            downloaded_files.append(file_response)
 
     def get_file_info(self, **kwargs) -> GoogleDriveFile:
         file_id = kwargs.get("file_id", None)

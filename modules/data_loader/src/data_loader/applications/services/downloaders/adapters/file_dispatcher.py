@@ -3,7 +3,6 @@
 from building_block.core.domain.file_model import FileModel as BaseFileModel, FileSource
 from building_block.utils.logging import log_success
 
-from data_loader.applications.models import DownloadResponse
 from data_loader.applications.services.downloaders import GoogleDriveDownloader
 from data_loader.applications.services.downloaders.ports.downloader import Downloader
 
@@ -35,7 +34,7 @@ class DownloaderDispatcher:
         file: BaseFileModel,
         dest_path: str,
         **kwargs,
-    ) -> list[DownloadResponse]:
+    ) -> list[BaseFileModel]:
         """
         Look up registry and call the appropriate downloader.
 
@@ -46,7 +45,7 @@ class DownloaderDispatcher:
                 Downloader.download (and parse_param).
 
         Returns:
-            List of DownloadResponse objects with file id, local path, and status
+            List of downloaded file domain models with local path and status.
 
         Raises:
             ValueError: If source is not registered
