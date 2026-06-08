@@ -230,3 +230,4 @@ building_block/google_tokens/
 logging/
 test/data
 
+**/.DS_Store
