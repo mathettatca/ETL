@@ -3,6 +3,7 @@ from pathlib import Path
 
 from building_block.core.domain.file_model import FileDownloadStatus
 from building_block.core.domain.google_drive_file_model import GoogleDriveFile
+from data_loader.applications.services.downloaders.adapters import google_drive_downloader
 from data_loader.applications.services.downloaders.adapters.google_drive_downloader import (
     GoogleDriveDownloader,
 )
@@ -34,6 +35,32 @@ def build_downloader(service: FakeGoogleDriveService) -> GoogleDriveDownloader:
     downloader = GoogleDriveDownloader.__new__(GoogleDriveDownloader)
     downloader.service = service
     return downloader
+
+
+def test_downloader_initializes_service_from_bootstrap(monkeypatch):
+    drive_client = object()
+    wrapper_calls = []
+
+    class FakeServiceWrapper:
+        def __init__(self, service):
+            wrapper_calls.append(service)
+            self.service = service
+
+    monkeypatch.setattr(
+        google_drive_downloader,
+        "initialize_google_drive_service",
+        lambda: drive_client,
+    )
+    monkeypatch.setattr(
+        google_drive_downloader,
+        "GoogleDriveService",
+        FakeServiceWrapper,
+    )
+
+    downloader = GoogleDriveDownloader()
+
+    assert wrapper_calls == [drive_client]
+    assert downloader.service.service is drive_client
 
 
 def test_download_handler_returns_success_model_when_file_is_new(tmp_path):

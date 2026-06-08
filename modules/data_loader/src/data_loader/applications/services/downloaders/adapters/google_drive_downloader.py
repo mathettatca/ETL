@@ -5,6 +5,10 @@ from datetime import datetime
 
 from building_block.core.domain.file_model import FileDownloadStatus
 from building_block.core.domain.google_drive_file_model import GoogleDriveFile
+from building_block.shared.scripts.bootstrap_google_drive import (
+    initialize_google_drive_service,
+)
+from building_block.shared.services.google_drive_service import GoogleDriveService
 from building_block.utils.file_utils import resolve_file_dest_path
 from building_block.utils.logging import debug, info, log_error, log_success
 from building_block.utils.mappers import GoogleDriveFileMapper
@@ -14,9 +18,8 @@ class GoogleDriveDownloader:
     """Downloader implementation for Google Drive."""
 
     def __init__(self) -> None:
-        from building_block.shared.services.google_drive_service import GoogleDriveService
-
-        self.service = GoogleDriveService()
+        drive_client = initialize_google_drive_service()
+        self.service = GoogleDriveService(service=drive_client)
 
     def download(
         self,
