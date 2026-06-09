@@ -169,4 +169,5 @@ members = [
     "building_block",
     "modules/data_access",
     "modules/data_loader",
+    "modules/data_processing",
 ]

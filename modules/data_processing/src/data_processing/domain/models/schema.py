@@ -1,0 +1,76 @@
+"""Schema configuration for HS-code processing."""
+
+from __future__ import annotations
+
+COLUMN_IMP_MAPPING = {
+    "Declaration No": "declaration_number",
+    "Transaction Date": "transaction_date",
+    "HS Code": "hs_code",
+    "Product Description": "product_description",
+    "Product Desc(EN)": "product_description_en",
+    "Supplier": "supplier_name",
+    "Buyer": "buyer_name",
+    "quantity": "quantity",
+    "Quantity unit": "quantity_unit",
+    "Unit Price(USD)": "unit_price_usd",
+    "Unit Price(Currency)": "unit_price_foreign_currency",
+    "Total Price(Currency)": "total_price_foreign_currency",
+    "Amount": "total_amount_usd",
+    "Exchange Rate": "exchange_rate",
+    "Incoterms": "incoterms",
+    "Payment Method": "payment_method",
+    "Import Country": "import_country",
+    "Mode of Transport": "transport_mode",
+    "Country of Origin": "country_of_origin",
+    "Customs Br Code": "customs_branch_code",
+    "Customs Br Name": "customs_branch_name",
+    "bill_id": "bill_id",
+    "buyer_country": "buyer_country",
+    "customs_branch_code_2": "customs_branch_code_secondary",
+    "date": "date",
+    "exporter_country": "exporter_country",
+    "foreign_currency": "foreign_currency",
+    "importer_address_vn": "importer_address_vn",
+    "importer_name_en": "importer_name_en",
+    "importer_tel": "importer_tel",
+    "type_of_import": "import_type",
+}
+
+COLUMN_TYPES = {
+    "declaration_number": "int",
+    "transaction_date": "str",
+    "hs_code": "int",
+    "product_description": "str",
+    "product_description_en": "str",
+    "supplier_name": "str",
+    "buyer_name": "str",
+    "quantity": "float64",
+    "quantity_unit": "str",
+    "unit_price_usd": "float64",
+    "unit_price_foreign_currency": "float64",
+    "total_price_foreign_currency": "float64",
+    "total_amount_usd": "float64",
+    "exchange_rate": "float",
+    "incoterms": "str",
+    "payment_method": "str",
+    "import_country": "str",
+    "transport_mode": "str",
+    "country_of_origin": "str",
+    "customs_branch_code": "str",
+    "customs_branch_name": "str",
+    "bill_id": "int",
+    "buyer_country": "str",
+    "customs_branch_code_secondary": "str",
+    "date": "str",
+    "exporter_country": "str",
+    "foreign_currency": "str",
+    "importer_address_vn": "str",
+    "importer_name_en": "str",
+    "importer_tel": "str",
+    "import_type": "str",
+}
+
+
+def mapped_columns() -> list[str]:
+    """Return canonical columns in source mapping order."""
+    return list(COLUMN_IMP_MAPPING.values())
