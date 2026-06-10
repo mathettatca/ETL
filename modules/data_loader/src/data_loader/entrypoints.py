@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from building_block.utils.file_utils import _is_supported_file_type
 from data_access.application.request.commands.audit_file_download.audit_file_download_command import (
     AuditFileDownloadCommand,
 )
@@ -51,24 +52,22 @@ def _send_audit_file_downloads(
     responses: list[FileModel],
 ) -> None:
     mediator = Mediator()
-    failures: list[Exception] = []
+    results: list[FileModel] = []
 
     for response in responses:
         command = _build_audit_file_download_command(response)
-        try:
-            mediator.send(command)
-        except Exception as exc:
-            failures.append(exc)
-            log_error(f"Audit file download failed for {response.name}: {exc}")
+        result:dict = mediator.send(command)
 
-    if responses and len(failures) == len(responses):
-        raise RuntimeError("All file download audit commands failed") from failures[0]
+        # start with the file model doc and attach inserted_id when available
+        response.file_id = result.get("inserted_id")
+        results.append(response)
 
-
+    return results
+        
 def run_data_loader(
     file_source: str,
     dest_path: str,
-    file_type:str ="csv",
+    file_type:str,
     **kwargs: Any,
 ) -> list[FileModel]:
     """
@@ -84,13 +83,12 @@ def run_data_loader(
     """
     source = FileSource(file_source)
     info(f"Starting data load from {source.value}")
-
     dispatcher = DownloaderDispatcher()
     file = dispatcher.get_file_info(source, **kwargs)
-    responses = dispatcher.download(file=file, dest_path=dest_path, **kwargs)
-    _send_audit_file_downloads(responses)
+    responses = dispatcher.download(file=file, dest_path=dest_path, file_type=file_type, **kwargs)
+    responses_with_audit = _send_audit_file_downloads(responses)
 
-    return responses
+    return responses_with_audit
 
 if __name__ == "__main__":
     response: list[FileModel] = run_data_loader(

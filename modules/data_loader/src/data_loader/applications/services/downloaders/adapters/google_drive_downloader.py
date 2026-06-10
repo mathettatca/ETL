@@ -9,7 +9,7 @@ from building_block.shared.scripts.bootstrap_google_drive import (
     initialize_google_drive_service,
 )
 from building_block.shared.services.google_drive_service import GoogleDriveService
-from building_block.utils.file_utils import resolve_file_dest_path
+from building_block.utils.file_utils import _is_supported_file_type, resolve_file_dest_path
 from building_block.utils.logging import debug, info, log_error, log_success
 from building_block.utils.mappers import GoogleDriveFileMapper
 
@@ -25,18 +25,20 @@ class GoogleDriveDownloader:
         self,
         file: GoogleDriveFile,
         dest_path: str,
+        file_type:str,
         **kwargs,
     ) -> list[GoogleDriveFile]:
         local_path = resolve_file_dest_path(file.name, dest_path)
         info(f"[Google Drive Downloader] Download Folder localPath: {local_path}")
         downloaded_files: list[GoogleDriveFile] = []
-        self._download_handler(file, local_path, downloaded_files)
+        self._download_handler(file, local_path,file_type, downloaded_files)
         return downloaded_files
 
     def _download_handler(
         self,
         gdrive_file: GoogleDriveFile,
         dest_path: str,
+        file_type:str,
         downloaded_files: list[GoogleDriveFile],
     ) -> GoogleDriveFile | None:
         if gdrive_file.mime_type == "application/vnd.google-apps.folder":
@@ -46,11 +48,13 @@ class GoogleDriveDownloader:
             for child_metadata in files_metadata:
                 child_file = GoogleDriveFileMapper.to_model(child_metadata)
                 child_dest_path = os.path.join(dest_path, child_file.name)
-                self._download_handler(child_file, child_dest_path, downloaded_files)
+                self._download_handler(child_file, child_dest_path, file_type, downloaded_files)
 
             log_success(f"Downloaded folder {gdrive_file.name} to {dest_path}")
             return None
 
+        if not _is_supported_file_type(file_name=gdrive_file.name, file_type=file_type):
+            return None
         local_file = gdrive_file.model_dump()
         file_existed_before_download = os.path.exists(dest_path)
         info(f"[Google Drive Downloader]: local_path :{dest_path}")

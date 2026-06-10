@@ -33,6 +33,7 @@ class DownloaderDispatcher:
         self,
         file: BaseFileModel,
         dest_path: str,
+        file_type,
         **kwargs,
     ) -> list[BaseFileModel]:
         """
@@ -57,7 +58,7 @@ class DownloaderDispatcher:
                 f"No downloader registered for source: {file.original.value}. "
                 f"Registered sources: {registered_sources}"
             )
-        return handler.download(file, dest_path, **kwargs)
+        return handler.download(file, dest_path,file_type, **kwargs)
 
     def get_file_info(self, source: FileSource, **kwargs) -> BaseFileModel:
         """

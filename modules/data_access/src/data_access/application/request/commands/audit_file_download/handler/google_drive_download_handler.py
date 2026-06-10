@@ -41,7 +41,8 @@ class AuditGoogleDriveFileDownloadHandler(BaseAuditFileDownloadSourceHandler):
                 return AuditFileDownloadCommandResponse(
                     status="success",
                     message="Update File Audit successfully",
-                    status_code= 201 
+                    status_code=201,
+                    inserted_id=str(file.file_id) ,
                 )
             file_model = GoogleDriveFile(
                 name=self.file_name,
@@ -53,11 +54,12 @@ class AuditGoogleDriveFileDownloadHandler(BaseAuditFileDownloadSourceHandler):
                 download_status=self.download_status,
             )
 
-            self.mongo_repository.insert_one(file_model)
+            inserted_id = self.mongo_repository.insert_one(file_model)
             return AuditFileDownloadCommandResponse(
                 status="success",
                 message="Import File Audit successfully",
-                status_code=200
+                status_code=200,
+                inserted_id=str(inserted_id),
             )
         except Exception as e:
             error_name = type(e).__name__

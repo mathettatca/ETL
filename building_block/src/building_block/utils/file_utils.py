@@ -1,5 +1,6 @@
 import os
 
+from building_block.shared.enum.supported_file_type import SupportedFileType
 from building_block.shared.setting.base_setting import AppBaseSetting
 from .project_paths import PROJECT_ROOT
 from building_block.utils.logging import info
@@ -41,3 +42,19 @@ def resolve_file_dest_path(file_name: str, dest_path: str) -> str:
 
     dest.mkdir(parents=True, exist_ok=True)
     return str(full_path)
+
+def _is_supported_file_type(
+    file_name:str,
+    file_type: SupportedFileType | str,
+) -> bool:
+    file_type = SupportedFileType(file_type)
+
+    file_extension = Path(file_name).suffix.lower()
+
+    if file_type == SupportedFileType.CSV:
+        return file_extension == ".csv"
+
+    if file_type == SupportedFileType.EXCEL:
+        return file_extension in [".xlsx", ".xls"]
+
+    return False

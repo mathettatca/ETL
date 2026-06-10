@@ -7,16 +7,16 @@ from building_block.shared.enum.file_source import FileSource
 import pandas as pd
 
 from data_processing.domain.models import ProcessedData
-
+from data_processing.application.pipelines.pipeline_factory import (
+    build_hscode_pipeline,
+    )
 
 def run_data_processing(
     file_path: str,
     file_id:str,
-    data_souce:FileSource
+    data_source:FileSource
 ) -> bool:
-    from data_processing.application.pipelines.pipeline_factory import (
-        build_hscode_pipeline,
-    )
+
 
     hs_code_pipeline = build_hscode_pipeline()
 
@@ -27,7 +27,7 @@ def run_data_processing(
             file_id=file_id,
             dataframe=dataframe,
             processed_at=datetime.now(),
-            data_source=data_souce
+            data_source=data_source
         )
     )
 

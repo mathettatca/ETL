@@ -33,9 +33,10 @@ class AuditAPIFileDownloadHandler(BaseAuditFileDownloadSourceHandler):
             spec=self.specs,
         )
 
-        self.mongo_repository.insert_one(file_model)
+        inserted_id = self.mongo_repository.insert_one(file_model)
         return AuditFileDownloadCommandResponse(
             status="success",
             message="Import File Audit successfully",
-            status_code=200
+            status_code=200,
+            inserted_id=str(inserted_id) if inserted_id is not None else None,
         )

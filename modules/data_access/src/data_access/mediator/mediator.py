@@ -15,7 +15,7 @@ class Mediator:
         return cls._instance
         
     
-    def send(self, request: BaseRequest) -> Any:
+    def send(self, request: BaseRequest) -> dict:
         handler = self._registry.resolve(type(request))
         return handler.handle(request)._to_doc()
     

@@ -170,4 +170,6 @@ members = [
     "modules/data_access",
     "modules/data_loader",
     "modules/data_processing",
+    "etl_pipeline",
+    "modules/etl_pipeline",
 ]

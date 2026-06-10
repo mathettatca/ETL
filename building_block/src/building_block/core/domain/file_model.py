@@ -14,7 +14,7 @@ class FileModel(CustomBaseModel):
     This is a Value Object with immutable behavior.
     """
 
-    file_id: str | None = Field(default=None, description="Unique file identifier")
+    file_id: str | None = Field(default=None, description="Mongo file identifier")
     name: str = Field(..., description="File name")
     date_create: datetime = Field(..., description="Creation date from source")
     date_download: datetime | None = Field(

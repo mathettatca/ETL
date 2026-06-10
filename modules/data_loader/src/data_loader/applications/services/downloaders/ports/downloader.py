@@ -10,6 +10,7 @@ class Downloader(Protocol):
         self,
         file: FileModel,
         dest_path: str,
+        file_type:str,
         **kwargs,
     ) -> list[FileModel]:
         ...
