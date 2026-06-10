@@ -2,7 +2,13 @@
 
 from abc import ABC, abstractmethod
 from typing import Any
-from data_processing.domain.models.processed_data import ProcessedData, ProcessingStatus
+
+from building_block.core.domain.processing_step import ProcessingStep, ProcessingStepStatus
+
+from data_processing.domain.models.processed_data import ProcessedData
+from data_processing.services.adapters.audit_processing_result import (
+    AuditProcessingResultAdapter,
+)
 
 
 class BaseProcessingHandler(ABC):
@@ -13,6 +19,7 @@ class BaseProcessingHandler(ABC):
 
     def __init__(self):
         self._next: "BaseProcessingHandler | None" = None
+        self.audit_processing_result = AuditProcessingResultAdapter()
 
     def set_next(self, handler: "BaseProcessingHandler") -> "BaseProcessingHandler":
         """
@@ -40,57 +47,40 @@ class BaseProcessingHandler(ABC):
             Processed data (possibly modified by entire chain)
         """
         result = self._process(data)
+        failed_step = self._get_failed_processing_step(result)
+        if failed_step is not None:
+            self.audit_processing_result.save(
+                file_id=result.file_id,
+                processing_step=data.processing_steps,
+            )
+            raise Exception(f"Processing step failed: {failed_step}")
         if self._next is not None:
             return self._next.handle(result)
+        
+        self.audit_processing_result.save(
+                file_id=result.file_id,
+                processing_step=data.processing_steps,
+            )
         return result
+
+    def _get_failed_processing_step(self, data: ProcessedData) -> dict[str, Any] | None:
+        for processing_step in data.processing_steps:
+            for step_name, step_result in processing_step.items():
+                status = None
+                error = None
+                if isinstance(step_result, ProcessingStep):
+                    status = step_result.status
+                    error = step_result.error
+
+
+                if status == ProcessingStepStatus.FAILED or status == "failed":
+                    return {
+                        "step_name": step_name,
+                        "error": error,
+                    }
+        return None
     
-    def _update_processing_result(
-        self,
-        data: ProcessedData,
-        processing_result: Any,
-        is_valid: bool,
-        processing_step:dict,
-        df: Any | None = None,
-    ) -> ProcessedData:
-        """
-        Update processing execution result into the `ProcessedData` object.
-
-        This method updates internal processing metadata and synchronizes
-        the latest execution state into the returned `ProcessedData` instance.
-
-        Updated attributes include:
-        - `structured_data["processing_step"]`
-        - `structured_data["dataframe"]` (if provided)
-        - `is_valid`
-        - `status`
-        - `errors`
-        - `processing_steps`
-
-        Args:
-            data (ProcessedData):
-                Current processed data instance.
-
-            processing_result (Any):
-                Result payload generated from the current processing step.
-                Usually contains logs, validation results, metrics,
-                transformation summaries, or execution details.
-
-            is_valid (bool):
-                Indicates whether the current processing step succeeded.
-
-            processing_step:
-                Name or identifier of the current processing step.
-
-            df (Any | None, optional):
-                Updated dataframe generated after processing.
-                If provided, replaces the existing dataframe stored in
-                `structured_data`.
-
-        Returns:
-            ProcessedData:
-                New immutable `ProcessedData` instance containing updated
-                processing state and execution metadata.
-        """
+        
 
     @abstractmethod
     def _process(self, data: ProcessedData) -> ProcessedData:

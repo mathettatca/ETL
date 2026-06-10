@@ -2,8 +2,6 @@ from data_access.application.base.base_response import BaseResponse
 
 
 class AuditFileDownloadCommandResponse(BaseResponse):
-    def __init__(self, status: str, message: str,status_code:int):
-        super().__init__(status, message,status_code)
 
     @classmethod
     def _to_model(cls, _dict: dict) -> "AuditFileDownloadCommandResponse":
@@ -11,7 +9,7 @@ class AuditFileDownloadCommandResponse(BaseResponse):
 
     def _to_doc(self) -> dict:
         return {
-            "status": self._status,
-            "message": self._message,
-            "status_code":self._status_code
+            "status": self.status,
+            "message": self.message,
+            "status_code":self.status_code
         }

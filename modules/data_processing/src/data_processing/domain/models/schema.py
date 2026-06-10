@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from building_block.utils.logging import info
+
 COLUMN_IMP_MAPPING = {
     "Declaration No": "declaration_number",
     "Transaction Date": "transaction_date",
@@ -36,40 +38,44 @@ COLUMN_IMP_MAPPING = {
     "type_of_import": "import_type",
 }
 
-COLUMN_TYPES = {
-    "declaration_number": "int",
-    "transaction_date": "str",
-    "hs_code": "int",
-    "product_description": "str",
-    "product_description_en": "str",
-    "supplier_name": "str",
-    "buyer_name": "str",
+COLUMN_IMP_TYPES = {
+    "Declaration No": "int",
+    "Transaction Date": "str",
+    "HS Code": "int",
+    "Product Description": "str",
+    "Product Desc(EN)": "str",
+    "Supplier": "str",
+    "Buyer": "str",
     "quantity": "float64",
-    "quantity_unit": "str",
-    "unit_price_usd": "float64",
-    "unit_price_foreign_currency": "float64",
-    "total_price_foreign_currency": "float64",
-    "total_amount_usd": "float64",
-    "exchange_rate": "float",
-    "incoterms": "str",
-    "payment_method": "str",
-    "import_country": "str",
-    "transport_mode": "str",
-    "country_of_origin": "str",
-    "customs_branch_code": "str",
-    "customs_branch_name": "str",
+    "Quantity unit": "str",
+    "Unit Price(USD)": "float64",
+    "Unit Price(Currency)": "float64",
+    "Total Price(Currency)": "float64",
+    "Amount": "float64",
+    "Exchange Rate": "float",
+    "Incoterms": "str",
+    "Payment Method": "str",
+    "Import Country": "str",
+    "Mode of Transport": "str",
+    "Country of Origin": "str",
+    "Customs Br Code": "str",
+    "Customs Br Name": "str",
     "bill_id": "int",
     "buyer_country": "str",
-    "customs_branch_code_secondary": "str",
+    "customs_branch_code_2": "str",
     "date": "str",
     "exporter_country": "str",
     "foreign_currency": "str",
     "importer_address_vn": "str",
     "importer_name_en": "str",
     "importer_tel": "str",
-    "import_type": "str",
+    "type_of_import": "str",
 }
 
+COLUMN_TYPES = {
+    COLUMN_IMP_MAPPING[source_column]: column_type
+    for source_column, column_type in COLUMN_IMP_TYPES.items()
+}
 
 def mapped_columns() -> list[str]:
     """Return canonical columns in source mapping order."""

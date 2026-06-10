@@ -2,15 +2,12 @@ from building_block.core.domain.hs_raw_data_model import HsRawDataModel
 from building_block.utils.file_utils import resolve_file_dest_path
 from building_block.utils.logging import info, log_success
 import pandas as pd
-from data_access.mediator import Mediator, build_data_access_mediator
+from data_access.mediator import Mediator
 from building_block.shared.enum import FileDownloadStatus, FileSource
 from data_access.application.request.commands.audit_file_download.audit_file_download_command import (
     AuditFileDownloadCommand,
 )
 from data_access.application.request.commands.save_hs_raw_data.save_hs_raw_data_command import SaveHsRawDataCommand
-
-def init_data_access() -> Mediator:
-    return build_data_access_mediator()
 
 
 def run_create_file_use_case(mediator: Mediator):
@@ -79,13 +76,14 @@ def run_hs_raw_data_usecase(mediator: Mediator):
 
     response = mediator.send(request)
 
-    log_success(f"Create file use case finished: {response._to_doc()}")
+    log_success(f"Create file use case finished: {response}")
+    log_success(f"Create file use case finished type: {type(response)}")
     return response
 
 
 def main():
     log_success("Data access started")
-    mediator = init_data_access()
+    mediator = Mediator()
     run_hs_raw_data_usecase(mediator)
 
 

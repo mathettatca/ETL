@@ -1,0 +1,28 @@
+[project]
+name = "data-processing"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "mathettatca", email = "khoinm0603@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "building-block",
+    "data-access",
+]
+
+[project.scripts]
+data-processing = "data_processing:main"
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["data_processing*"]
+
+[tool.uv.sources]
+building-block = { workspace = true }
+data-access = { workspace = true }

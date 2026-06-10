@@ -1,16 +1,26 @@
 """Pipeline factory — wires the Chain of Responsibility pipeline."""
 
-from data_processing.application.pipeline_handlers import (
+from data_processing.domain.models import (
     BaseProcessingHandler,
-    ValidationHandler,
-    SavingHandler,
+)
+from data_processing.application.pipelines.pipeline_handlers.hs_code_handlers import (
+    BuyerAddressGroupingHandler,
+    HsCodeColumnMappingHandler,
+    HsCodeSchemaValidationHandler,
+    SaveHsRawDataMediatorHandler,
 )
 
+
 def build_hscode_pipeline() -> BaseProcessingHandler:
-    validation_handler: BaseProcessingHandler = ValidationHandler()
-    saving_handler: BaseProcessingHandler = SavingHandler()
-    validation_handler.set_next(saving_handler)
-    return validation_handler
+    return build_custom_pipeline(
+        [
+            HsCodeColumnMappingHandler(),
+            HsCodeSchemaValidationHandler(),
+            BuyerAddressGroupingHandler(),
+            SaveHsRawDataMediatorHandler(),
+        ]
+    )
+
 
 def build_custom_pipeline(handlers: list[BaseProcessingHandler]) -> BaseProcessingHandler:
     """

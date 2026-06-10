@@ -1,13 +1,12 @@
 from abc import ABC
 from enum import Enum
 
+from building_block.core.base.base_model import CustomBaseModel
+from pydantic import Field
 
 
-class BaseResponse(ABC):
-    _status_code:int = None
-    _status: str = None
-    _message:str = None
-    def __init__(self,status:str,message:str,status_code:int =200):
-        self._status_code = status_code
-        self._status = status
-        self._message= message
+
+class BaseResponse(ABC,CustomBaseModel):
+    status: str = Field(description="Response status")
+    message: str = Field(description="Response message")
+    status_code: int = Field(default=200, description="Response status code")

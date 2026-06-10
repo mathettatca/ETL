@@ -68,6 +68,7 @@ def _send_audit_file_downloads(
 def run_data_loader(
     file_source: str,
     dest_path: str,
+    file_type:str ="csv",
     **kwargs: Any,
 ) -> list[FileModel]:
     """
@@ -94,7 +95,7 @@ def run_data_loader(
 if __name__ == "__main__":
     response: list[FileModel] = run_data_loader(
         file_source=FileSource.GOOGLE_DRIVE.value,
-        dest_path="test/data/2026_06_06/",  # xài đường dẫn tương đối thì ko thêm "/" phía trc
-        file_id="1O80UyeZUXugNk3QI1IASX2PWWoBfVO82",
+        dest_path="test/data/2026_06_10/",  # xài đường dẫn tương đối thì ko thêm "/" phía trc
+        file_id="1ily-9QVNs6LqPFRqJXH79ktvkZTA1Y4m",
     )
     print(f"Run data loader response: {response}")

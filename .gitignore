@@ -231,3 +231,5 @@ logging/
 test/data
 
 **/.DS_Store
+test/
+

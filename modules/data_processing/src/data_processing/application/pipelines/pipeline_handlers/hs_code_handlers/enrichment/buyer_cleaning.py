@@ -1,0 +1,4 @@
+BUYER_COLUMN = "Buyer"
+BUYER_CLEANED_COLUMN = "Buyer Cleaned"
+BUYER_ADDRESS_COLUMN = "Buyer Address"
+BUYER_ADDRESS_CLEANED_COLUMN = "Buyer Address Cleaned"
