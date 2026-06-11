@@ -30,3 +30,4 @@ RUN pip install --no-cache-dir uv \
 
 COPY dags ./dags
 COPY src ./src
+COPY scripts/bootstrap_google_drive.py ./scripts/bootstrap_google_drive.py

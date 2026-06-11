@@ -11,13 +11,11 @@ echo "--> Validate required environment variables..."
 required_vars=(
   "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN"
   "AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE"
-  "AIRFLOW_ADMIN_USERNAME"
-  "AIRFLOW_ADMIN_PASSWORD"
   "AIRFLOW__SMTP__SMTP_HOST"
   "AIRFLOW__SMTP__SMTP_PORT"
-  "AIRFLOW__SMTP__SMTP_USER"
-  "AIRFLOW__SMTP__SMTP_PASSWORD"
   "AIRFLOW__SMTP__SMTP_MAIL_FROM"
+  "AIRFLOW__SMTP__SMTP_PASSWORD"
+  "GOOGLE_APPLICATION_CREDENTIALS"
   "FAILURE_EMAIL"
   "PIPELINE_SUMMARY_EMAIL"
 )
@@ -33,50 +31,56 @@ done
 echo ""
 echo "--> Configure SimpleAuthManager password file..."
 
-python - <<'PY'
-import json
-import os
-from pathlib import Path
+mkdir -p "$(dirname "${AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE}")"
+cp /opt/airflow/bootstrap/simple_auth_manager_passwords.json \
+  "${AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE}"
+chown -R "${AIRFLOW_UID:-50000}:0" /opt/airflow/config
 
-passwords_file = Path(os.environ["AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE"])
-username = os.environ["AIRFLOW_ADMIN_USERNAME"]
-password = os.environ["AIRFLOW_ADMIN_PASSWORD"]
+run_airflow() {
+  if [[ "$(id -u)" == "0" ]]; then
+    local command
+    printf -v command "%q " "$@"
+    su airflow -c "${command}"
+  else
+    "$@"
+  fi
+}
 
-passwords_file.parent.mkdir(parents=True, exist_ok=True)
-passwords_file.write_text(
-    json.dumps({username: password}),
-    encoding="utf-8",
-)
-
-print(f"SimpleAuthManager password file created: {passwords_file}")
-print(f"SimpleAuthManager user: {username}")
-PY
+echo "SimpleAuthManager password file copied: ${AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE}"
 
 echo ""
 echo "--> Migrate Airflow metadata DB..."
 
-airflow db migrate
+run_airflow airflow db migrate
 
 echo ""
-echo "--> Create smtp_default connection from docker-compose environment..."
+echo "--> Validate smtp_default runtime connection..."
 
-SMTP_PASSWORD_CLEAN="$(echo "${AIRFLOW__SMTP__SMTP_PASSWORD}" | tr -d ' ')"
+SMTP_PASSWORD_CLEAN="$(echo "${AIRFLOW__SMTP__SMTP_PASSWORD:-}" | tr -d ' ')"
+SMTP_MAIL_FROM="${AIRFLOW__SMTP__SMTP_MAIL_FROM:-${AIRFLOW__SMTP__SMTP_USER:-}}"
 
-airflow connections delete smtp_default 2>/dev/null || true
+if [[ -z "${AIRFLOW__SMTP__SMTP_USER:-}" || -z "${SMTP_PASSWORD_CLEAN}" || -z "${SMTP_MAIL_FROM}" || -z "${AIRFLOW_CONN_SMTP_DEFAULT:-}" ]]; then
+  echo "Missing SMTP config. Set AIRFLOW__SMTP__SMTP_USER, AIRFLOW__SMTP__SMTP_PASSWORD, AIRFLOW__SMTP__SMTP_MAIL_FROM, and AIRFLOW_CONN_SMTP_DEFAULT." >&2
+  exit 1
+fi
 
-airflow connections add smtp_default \
-  --conn-type smtp \
-  --conn-host "${AIRFLOW__SMTP__SMTP_HOST}" \
-  --conn-login "${AIRFLOW__SMTP__SMTP_USER}" \
-  --conn-password "${SMTP_PASSWORD_CLEAN}" \
-  --conn-port "${AIRFLOW__SMTP__SMTP_PORT}" \
-  --conn-extra "{\"smtp_starttls\": ${AIRFLOW__SMTP__SMTP_STARTTLS}, \"smtp_ssl\": ${AIRFLOW__SMTP__SMTP_SSL}}"
+echo "smtp_default is provided by AIRFLOW_CONN_SMTP_DEFAULT."
+
+echo ""
+echo "--> Validate google_cloud_default runtime connection..."
+
+if [[ -z "${AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT:-}" ]]; then
+  echo "Missing Google Cloud config. Set AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT." >&2
+  exit 1
+fi
+
+echo "google_cloud_default is provided by AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT."
 
 echo ""
 echo "--> Sync docker-compose email env to Airflow Variables..."
 
-airflow variables set failure_email "${FAILURE_EMAIL}"
-airflow variables set pipeline_summary_email "${PIPELINE_SUMMARY_EMAIL}"
+run_airflow airflow variables set failure_email "${FAILURE_EMAIL}"
+run_airflow airflow variables set pipeline_summary_email "${PIPELINE_SUMMARY_EMAIL}"
 
 echo ""
 echo "======================================================"

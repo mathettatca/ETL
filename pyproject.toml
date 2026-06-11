@@ -17,6 +17,7 @@ dependencies = [
     "apache-airflow-providers-common-compat==1.15.0",
     "apache-airflow-providers-common-io==1.7.2",
     "apache-airflow-providers-common-sql==2.0.0",
+    "apache-airflow-providers-google>=22.1.0",
     "apache-airflow-providers-smtp==3.0.1",
     "apache-airflow-providers-standard==1.13.1",
     "apache-airflow-task-sdk==1.2.1",

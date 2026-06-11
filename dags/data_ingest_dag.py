@@ -1,27 +1,35 @@
-from airflow._shared import module_loading
+import logging
+from pathlib import Path
 from datetime import datetime, timedelta
 from html import escape
 import pendulum
 
 from airflow import DAG
 from airflow.models import Variable
+from airflow.providers.standard.operators.bash import BashOperator
 from airflow.sdk import task
 from airflow.utils.email import send_email
 
-from building_block.utils.project_paths import PROJECT_ROOT
 try:
     from .common import GoogleDriveSensor
     from .common.notifications import build_gmail_failure_callback, _parse_recipients
 except ImportError:
     from common import GoogleDriveSensor
     from common.notifications import build_gmail_failure_callback, _parse_recipients
-try:
-    from modules.etl_pipeline.src.hs_code_daily import run_pipeline
-except ImportError:
-    from hs_code_daily import run_pipeline
 
-from building_block.core.domain.file_model import FileSource
-from building_block.utils.logging import info
+logger = logging.getLogger(__name__)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PIPELINE_PYTHONPATH = ":".join(
+    str(PROJECT_ROOT / path)
+    for path in (
+        "src/modules/etl_pipeline/src",
+        "src/modules/data_loader/src",
+        "src/modules/data_processing/src",
+        "src/modules/data_access/src",
+        "src/building_block/src",
+    )
+)
+PIPELINE_SCRIPT = PROJECT_ROOT / "src/modules/etl_pipeline/src/hs_code_daily.py"
 
 
 def _html_cell(value: object) -> str:
@@ -104,7 +112,7 @@ def task_send_pipeline_summary_email(**context) -> str | None:
         )
     recipients = _parse_recipients(recipients_value)
     if not recipients:
-        info("[summary_email] No recipients configured - skipping.")
+        logger.info("[summary_email] No recipients configured - skipping.")
         return None
 
     load_summary = ti.xcom_pull(task_ids="data_loader_task", key="load_summary") or {}
@@ -303,18 +311,8 @@ def task_send_pipeline_summary_email(**context) -> str | None:
         subject=f"[Airflow][SUMMARY][{status}] {dag_id}",
         html_content=html_content,
     )
-    info(f"[summary_email] Sent pipeline summary email to {recipients}.")
+    logger.info("[summary_email] Sent pipeline summary email to %s.", recipients)
     return html_content
-
-
-@task(task_id="data_pipeline_task")
-def task_run_pipeline(**context) -> bool:
-    params = context.get("params", {})
-    return run_pipeline(
-        file_source=params.get("source"),
-        dest_path=params.get("dest_path"),
-        google_drive_folder_id=params.get("google_drive_folder_id"),
-    )
 
 
 gmail_failure_callback = build_gmail_failure_callback()
@@ -334,7 +332,7 @@ with DAG(
     start_date=pendulum.datetime(2026, 1, 1, tz="Asia/Ho_Chi_Minh"),
     catchup=False,
     params={
-        "source": FileSource.GOOGLE_DRIVE.value,
+        "source": "google_drive",
         "dest_path": str(PROJECT_ROOT),
         "google_drive_folder_id": '1sbRDJhwTcUX02_YkiF5gmdjjf64uJ8L3',
         "date":None
@@ -352,14 +350,24 @@ with DAG(
 
     summary_email_task = task_send_pipeline_summary_email()
 
-    data_pipeline_task = task_run_pipeline()
+    data_pipeline_task = BashOperator(
+        task_id="data_pipeline_task",
+        bash_command=(
+            f"cd {PROJECT_ROOT} && "
+            f"PYTHONPATH={PIPELINE_PYTHONPATH} "
+            f"python {PIPELINE_SCRIPT} "
+            "--file-source '{{ params.source }}' "
+            "--dest-path '{{ params.dest_path }}' "
+            "--google-drive-folder-id '{{ params.google_drive_folder_id }}'"
+        ),
+    )
     google_drive_sensor >> data_pipeline_task >> summary_email_task
 
 
 if __name__ == "__main__":
     dag.test(
         run_conf={
-            "source": FileSource.GOOGLE_DRIVE.value,
+            "source": "google_drive",
             "dest_path": str(PROJECT_ROOT),
             "google_drive_folder_id": "1sbRDJhwTcUX02_YkiF5gmdjjf64uJ8L3",
         },

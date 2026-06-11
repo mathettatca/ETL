@@ -1,6 +1,6 @@
+import argparse
 from typing import Any
 
-from building_block.shared.enum.file_source import FileSource
 from building_block.shared.enum.supported_file_type import SupportedFileType
 from data_loader.entrypoints import run_data_loader
 from data_processing.entrypoints import run_data_processing
@@ -33,9 +33,19 @@ def run_pipeline(
 
     return True
 
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the daily HS code pipeline.")
+    parser.add_argument("--file-source", required=True)
+    parser.add_argument("--dest-path", required=True)
+    parser.add_argument("--google-drive-folder-id")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = _parse_args()
     run_pipeline(
-        file_source=FileSource.GOOGLE_DRIVE,
-        dest_path="test/2026_10_06",
-        file_id="1ily-9QVNs6LqPFRqJXH79ktvkZTA1Y4m",
+        file_source=args.file_source,
+        dest_path=args.dest_path,
+        google_drive_folder_id=args.google_drive_folder_id,
     )

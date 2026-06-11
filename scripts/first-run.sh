@@ -32,8 +32,12 @@ if [[ "${RESET_LOCAL_DATA}" == "1" ]]; then
 fi
 
 echo ""
+echo "--> Build Airflow image"
+docker build -t sts-data-ingestion-airflow:local .
+
+echo ""
 echo "--> Start Docker Compose stack"
-${COMPOSE} up -d
+${COMPOSE} up -d --no-build
 
 echo ""
 ${COMPOSE} ps

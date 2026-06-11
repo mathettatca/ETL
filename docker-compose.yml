@@ -13,14 +13,24 @@ x-airflow-common:
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN:-postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow}
     AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES:-false}
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: ${AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION:-true}
-    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET:-local-dev-secret}
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: ${AIRFLOW__CORE__EXECUTION_API_SERVER_URL:-http://airflow-apiserver:8080/execution/}
+    AIRFLOW__API__BASE_URL: ${AIRFLOW__API__BASE_URL:-http://airflow-apiserver:8080}
+    AIRFLOW__API__SECRET_KEY: ${AIRFLOW__API__SECRET_KEY:-local-dev-airflow-api-secret-key-please-change-me-64-bytes-minimum}
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET:-local-dev-airflow-api-auth-jwt-secret-please-change-me-64-bytes-minimum}
+    AIRFLOW__LOGGING__WORKER_LOG_SERVER_PORT: ${AIRFLOW__LOGGING__WORKER_LOG_SERVER_PORT:-8793}
     AIRFLOW__SMTP__SMTP_HOST: ${AIRFLOW__SMTP__SMTP_HOST:-smtp.gmail.com}
     AIRFLOW__SMTP__SMTP_STARTTLS: ${AIRFLOW__SMTP__SMTP_STARTTLS:-True}
     AIRFLOW__SMTP__SMTP_SSL: ${AIRFLOW__SMTP__SMTP_SSL:-False}
     AIRFLOW__SMTP__SMTP_PORT: ${AIRFLOW__SMTP__SMTP_PORT:-587}
     AIRFLOW__SMTP__SMTP_USER: ${AIRFLOW__SMTP__SMTP_USER:-}
     AIRFLOW__SMTP__SMTP_PASSWORD: ${AIRFLOW__SMTP__SMTP_PASSWORD:-}
-    AIRFLOW__SMTP__SMTP_MAIL_FROM: ${AIRFLOW__SMTP__SMTP_MAIL_FROM:-tool.nguyenminhkhoi@gmail.com}
+    AIRFLOW__SMTP__SMTP_MAIL_FROM: ${AIRFLOW__SMTP__SMTP_MAIL_FROM:-}
+    AIRFLOW__EMAIL__EMAIL_BACKEND: airflow.utils.email.send_email_smtp
+    AIRFLOW__EMAIL__EMAIL_CONN_ID: ${AIRFLOW__EMAIL__EMAIL_CONN_ID:-smtp_default}
+    AIRFLOW__EMAIL__FROM_EMAIL: ${AIRFLOW__EMAIL__FROM_EMAIL:-}
+    AIRFLOW_CONN_SMTP_DEFAULT: >-
+      {"conn_type":"smtp","host":"${AIRFLOW__SMTP__SMTP_HOST:-smtp.gmail.com}","login":"${AIRFLOW__SMTP__SMTP_USER:-}","password":"${AIRFLOW__SMTP__SMTP_PASSWORD:-}","port":${AIRFLOW__SMTP__SMTP_PORT:-587},"extra":{"disable_ssl":true,"disable_tls":false,"from_email":"khoinm0603@gmail.com"}}
+    AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT: ${AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT:-google-cloud-platform://?scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.readonly}
     PYTHONPATH: /opt/airflow/src
     MONGO_HOST: mongo
     MONGO_PORT: 27017
@@ -31,8 +41,14 @@ x-airflow-common:
     POSTGRES_USER: ${APP_POSTGRES_USER:-sts}
     POSTGRES_PASSWORD: ${APP_POSTGRES_PASSWORD:-sts}
     POSTGRES_DB: ${APP_POSTGRES_DB:-sts_beyond}
+    GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-/opt/airflow/client_secret.json}
     GOOGLE_CREDENTIALS_PATH: ${GOOGLE_CREDENTIALS_PATH:-/opt/airflow/client_secret.json}
     GOOGLE_TOKEN_PATH: /opt/airflow/google_tokens/client_secret.token.json
+    GOOGLE_DRIVE_BOOTSTRAP_SCRIPT: ${GOOGLE_DRIVE_BOOTSTRAP_SCRIPT:-/opt/airflow/scripts/bootstrap_google_drive.py}
+    GOOGLE_OAUTH_REDIRECT_HOST: ${GOOGLE_OAUTH_REDIRECT_HOST:-localhost}
+    GOOGLE_OAUTH_BIND_ADDR: ${GOOGLE_OAUTH_BIND_ADDR:-0.0.0.0}
+    GOOGLE_OAUTH_REDIRECT_PORT: ${GOOGLE_OAUTH_REDIRECT_PORT:-8090}
+    GOOGLE_OAUTH_OPEN_BROWSER: ${GOOGLE_OAUTH_OPEN_BROWSER:-false}
     FAILURE_EMAIL: ${FAILURE_EMAIL:-khoinm0603@gmail.com}
     PIPELINE_SUMMARY_EMAIL: ${PIPELINE_SUMMARY_EMAIL:-khoinm0603@gmail.com}
     AIRFLOW_ADMIN_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-airflow}
@@ -45,6 +61,11 @@ x-airflow-common:
     - ./src:/opt/airflow/src
     - ./logs:/opt/airflow/logs
     - ./client_secret.json:/opt/airflow/client_secret.json:ro
+    - ./google_tokens:/opt/airflow/google_tokens
+    - airflow-config:/opt/airflow/config
+    - ./config/simple_auth_manager_passwords.json:/opt/airflow/bootstrap/simple_auth_manager_passwords.json:ro
+    - ./scripts/entrypoint-init.sh:/opt/airflow/scripts/entrypoint-init.sh:ro
+    - ./scripts/bootstrap_google_drive.py:/opt/airflow/scripts/bootstrap_google_drive.py:ro
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     airflow-postgres:
@@ -109,15 +130,10 @@ services:
 
   airflow-init:
     <<: *airflow-common
+    user: "0:0"
     entrypoint: /bin/bash
     command:
-      - -c
-      - |
-        mkdir -p /opt/airflow/logs /opt/airflow/plugins /opt/airflow/config /opt/airflow/output /opt/airflow/exports /opt/airflow/logging /opt/airflow/google_tokens
-        python -c 'import json, os, pathlib; path = pathlib.Path(os.environ["AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE"]); path.parent.mkdir(parents=True, exist_ok=True); path.write_text(json.dumps({os.environ.get("AIRFLOW_ADMIN_USERNAME", "admin"): os.environ.get("AIRFLOW_ADMIN_PASSWORD", "admin")}) + "\n")'
-        airflow db migrate
-        airflow variables set failure_email "$${FAILURE_EMAIL:-khoinm0603@gmail.com}"
-        airflow variables set pipeline_summary_email "$${PIPELINE_SUMMARY_EMAIL:-khoinm0603@gmail.com}"
+      - /opt/airflow/scripts/entrypoint-init.sh
     restart: "no"
 
   airflow-apiserver:
@@ -126,8 +142,6 @@ services:
       - api-server
     ports:
       - "${AIRFLOW_WEBSERVER_PORT:-8080}:8080"
-    volumes:
-      - ./config/simple_auth_manager_passwords.json:/opt/airflow/config/simple_auth_manager_passwords.json
     restart: always
     depends_on:
       airflow-postgres:
@@ -141,7 +155,10 @@ services:
 
   airflow-scheduler:
     <<: *airflow-common
+    hostname: airflow-scheduler
     command: scheduler
+    ports:
+      - "${GOOGLE_OAUTH_REDIRECT_PORT:-8090}:8090"
     restart: always
     depends_on:
       airflow-postgres:
@@ -185,3 +202,4 @@ volumes:
   airflow-postgres-db-volume:
   app-postgres-db-volume:
   mongo-db-volume:
+  airflow-config:
