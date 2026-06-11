@@ -14,6 +14,11 @@ USER airflow
 WORKDIR /opt/airflow
 
 COPY pyproject.toml uv.lock* ./
+COPY src/building_block/pyproject.toml ./src/building_block/pyproject.toml
+COPY src/modules/data_access/pyproject.toml ./src/modules/data_access/pyproject.toml
+COPY src/modules/data_loader/pyproject.toml ./src/modules/data_loader/pyproject.toml
+COPY src/modules/data_processing/pyproject.toml ./src/modules/data_processing/pyproject.toml
+COPY src/modules/etl_pipeline/pyproject.toml ./src/modules/etl_pipeline/pyproject.toml
 
 # Dùng pip của airflow user, cài uv trước
 RUN pip install --no-cache-dir uv \

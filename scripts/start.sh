@@ -7,8 +7,11 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
 COMPOSE="${COMPOSE:-docker compose}"
-POSTGRES_USER="${POSTGRES_USER:-stsbeyond}"
-POSTGRES_DB="${POSTGRES_DB:-data_ingestion}"
+APP_POSTGRES_SERVICE="${APP_POSTGRES_SERVICE:-app-postgres}"
+AIRFLOW_POSTGRES_SERVICE="${AIRFLOW_POSTGRES_SERVICE:-airflow-postgres}"
+APP_POSTGRES_USER="${APP_POSTGRES_USER:-sts}"
+APP_POSTGRES_DB="${APP_POSTGRES_DB:-sts_beyond}"
+AIRFLOW_API_SERVICE="${AIRFLOW_API_SERVICE:-airflow-apiserver}"
 
 echo "======================================================"
 echo " STSDataIngestion - Docker Start"
@@ -16,20 +19,20 @@ echo "======================================================"
 
 echo ""
 echo "--> Start PostgreSQL and MongoDB"
-${COMPOSE} up -d postgres mongo
+${COMPOSE} up -d "${AIRFLOW_POSTGRES_SERVICE}" "${APP_POSTGRES_SERVICE}" mongo
 
 echo ""
-echo "--> Wait for PostgreSQL healthcheck"
+echo "--> Wait for app PostgreSQL healthcheck"
 for _ in {1..60}; do
-  if ${COMPOSE} exec -T postgres pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" >/dev/null 2>&1; then
-    echo "    PostgreSQL is ready."
+  if ${COMPOSE} exec -T "${APP_POSTGRES_SERVICE}" pg_isready -U "${APP_POSTGRES_USER}" -d "${APP_POSTGRES_DB}" >/dev/null 2>&1; then
+    echo "    App PostgreSQL is ready."
     break
   fi
   sleep 2
 done
 
-if ! ${COMPOSE} exec -T postgres pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" >/dev/null 2>&1; then
-  echo "PostgreSQL did not become ready in time." >&2
+if ! ${COMPOSE} exec -T "${APP_POSTGRES_SERVICE}" pg_isready -U "${APP_POSTGRES_USER}" -d "${APP_POSTGRES_DB}" >/dev/null 2>&1; then
+  echo "App PostgreSQL did not become ready in time." >&2
   exit 1
 fi
 
@@ -50,19 +53,19 @@ fi
 
 echo ""
 echo "--> Start Airflow runtime services"
-${COMPOSE} up -d airflow-webserver airflow-scheduler airflow-dag-processor
+${COMPOSE} up -d "${AIRFLOW_API_SERVICE}" airflow-scheduler airflow-dag-processor airflow-triggerer
 
 echo ""
 echo "--> Wait for Airflow API healthcheck"
 for _ in {1..60}; do
-  if ${COMPOSE} exec -T airflow-webserver curl --fail http://localhost:8080/api/v2/monitor/health >/dev/null 2>&1; then
+  if ${COMPOSE} exec -T "${AIRFLOW_API_SERVICE}" curl --fail http://localhost:8080/api/v2/monitor/health >/dev/null 2>&1; then
     echo "    Airflow API is ready."
     break
   fi
   sleep 2
 done
 
-if ! ${COMPOSE} exec -T airflow-webserver curl --fail http://localhost:8080/api/v2/monitor/health >/dev/null 2>&1; then
+if ! ${COMPOSE} exec -T "${AIRFLOW_API_SERVICE}" curl --fail http://localhost:8080/api/v2/monitor/health >/dev/null 2>&1; then
   echo "Airflow API did not become ready in time." >&2
   exit 1
 fi
