@@ -166,10 +166,9 @@ dependencies = [
 
 [tool.uv.workspace]
 members = [
-    "building_block",
-    "modules/data_access",
-    "modules/data_loader",
-    "modules/data_processing",
-    "etl_pipeline",
-    "modules/etl_pipeline",
+    "src/building_block",
+    "src/modules/data_access",
+    "src/modules/data_loader",
+    "src/modules/data_processing",
+    "src/modules/etl_pipeline",
 ]
