@@ -3,6 +3,7 @@
 import os
 from typing import Any
 
+from building_block.shared.scripts.bootstrap_google_drive import initialize_google_drive_service
 from googleapiclient.http import MediaIoBaseDownload
 from tqdm import tqdm
 
@@ -34,12 +35,7 @@ class GoogleDriveService:
             return
 
         if service is None:
-            raise RuntimeError(
-                "Google Drive API stage client is required. "
-                "Call initialize_google_drive_service() from "
-                "building_block.shared.scripts.bootstrap_google_drive and pass "
-                "the returned client into GoogleDriveService(service=...)."
-            )
+            initialize_google_drive_service()
 
         self._service = service
         self._initialized = True

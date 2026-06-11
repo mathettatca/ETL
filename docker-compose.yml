@@ -1,0 +1,184 @@
+x-airflow-common:
+  &airflow-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: sts-data-ingestion-airflow:local
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: ${AIRFLOW__CORE__EXECUTOR:-LocalExecutor}
+    AIRFLOW__CORE__AUTH_MANAGER: ${AIRFLOW__CORE__AUTH_MANAGER:-airflow.api_fastapi.auth.managers.simple.simple_auth_manager.SimpleAuthManager}
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: ${AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS:-admin:admin}
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: ${AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE:-/opt/airflow/config/simple_auth_manager_passwords.json}
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN:-postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow}
+    AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES:-false}
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: ${AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION:-true}
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET:-local-dev-secret}
+    AIRFLOW__SMTP__SMTP_HOST: ${AIRFLOW__SMTP__SMTP_HOST:-smtp.gmail.com}
+    AIRFLOW__SMTP__SMTP_STARTTLS: ${AIRFLOW__SMTP__SMTP_STARTTLS:-True}
+    AIRFLOW__SMTP__SMTP_SSL: ${AIRFLOW__SMTP__SMTP_SSL:-False}
+    AIRFLOW__SMTP__SMTP_PORT: ${AIRFLOW__SMTP__SMTP_PORT:-587}
+    AIRFLOW__SMTP__SMTP_USER: ${AIRFLOW__SMTP__SMTP_USER:-}
+    AIRFLOW__SMTP__SMTP_PASSWORD: ${AIRFLOW__SMTP__SMTP_PASSWORD:-}
+    AIRFLOW__SMTP__SMTP_MAIL_FROM: ${AIRFLOW__SMTP__SMTP_MAIL_FROM:-tool.nguyenminhkhoi@gmail.com}
+    PYTHONPATH: /opt/airflow/src
+    MONGO_HOST: mongo
+    MONGO_PORT: 27017
+    MONGO_DB_NAME: ${MONGO_DB_NAME:-etl_pipeline_db}
+    MONGO_TIMEOUT: ${MONGO_TIMEOUT:-5000}
+    POSTGRES_HOST: app-postgres
+    POSTGRES_PORT: 5432
+    POSTGRES_USER: ${APP_POSTGRES_USER:-sts}
+    POSTGRES_PASSWORD: ${APP_POSTGRES_PASSWORD:-sts}
+    POSTGRES_DB: ${APP_POSTGRES_DB:-sts_beyond}
+    GOOGLE_CREDENTIALS_PATH: ${GOOGLE_CREDENTIALS_PATH:-/opt/airflow/client_secret.json}
+    GOOGLE_TOKEN_PATH: /opt/airflow/google_tokens/client_secret.token.json
+    FAILURE_EMAIL: ${FAILURE_EMAIL:-khoinm0603@gmail.com}
+    PIPELINE_SUMMARY_EMAIL: ${PIPELINE_SUMMARY_EMAIL:-khoinm0603@gmail.com}
+    AIRFLOW_ADMIN_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-airflow}
+    AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-airflow}
+    AIRFLOW_ADMIN_FIRSTNAME: ${AIRFLOW_ADMIN_FIRSTNAME:-Airflow}
+    AIRFLOW_ADMIN_LASTNAME: ${AIRFLOW_ADMIN_LASTNAME:-Admin}
+    AIRFLOW_ADMIN_EMAIL: ${AIRFLOW_ADMIN_EMAIL:-khoinm0603@gmail.com}
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./src:/opt/airflow/src
+    - ./logs:/opt/airflow/logs
+    - ./client_secret.json:/opt/airflow/client_secret.json:ro
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    airflow-postgres:
+      condition: service_healthy
+    mongo:
+      condition: service_healthy
+    app-postgres:
+      condition: service_healthy
+
+services:
+  airflow-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  app-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${APP_POSTGRES_USER:-sts}
+      POSTGRES_PASSWORD: ${APP_POSTGRES_PASSWORD:-sts}
+      POSTGRES_DB: ${APP_POSTGRES_DB:-sts_beyond}
+    ports:
+      - "${APP_POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - app-postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${APP_POSTGRES_USER:-sts}", "-d", "${APP_POSTGRES_DB:-sts_beyond}"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "${MONGO_PORT_HOST:-27017}:27017"
+    volumes:
+      - mongo-db-volume:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "db.adminCommand('ping').ok",
+        ]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        mkdir -p /opt/airflow/logs /opt/airflow/plugins /opt/airflow/config /opt/airflow/output /opt/airflow/exports /opt/airflow/logging /opt/airflow/google_tokens
+        python -c 'import json, os, pathlib; path = pathlib.Path(os.environ["AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE"]); path.parent.mkdir(parents=True, exist_ok=True); path.write_text(json.dumps({os.environ.get("AIRFLOW_ADMIN_USERNAME", "admin"): os.environ.get("AIRFLOW_ADMIN_PASSWORD", "admin")}) + "\n")'
+        airflow db migrate
+        airflow variables set failure_email "$${FAILURE_EMAIL:-khoinm0603@gmail.com}"
+        airflow variables set pipeline_summary_email "$${PIPELINE_SUMMARY_EMAIL:-khoinm0603@gmail.com}"
+    restart: "no"
+
+  airflow-apiserver:
+    <<: *airflow-common
+    command: api-server
+    ports:
+      - "${AIRFLOW_WEBSERVER_PORT:-8080}:8080"
+    restart: always
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      app-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    restart: always
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      app-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    restart: always
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      app-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+    restart: always
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      app-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  airflow-postgres-db-volume:
+  app-postgres-db-volume:
+  mongo-db-volume:

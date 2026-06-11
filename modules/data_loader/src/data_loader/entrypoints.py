@@ -50,13 +50,13 @@ def _build_audit_file_download_command(
 
 def _send_audit_file_downloads(
     responses: list[FileModel],
-) -> None:
+) -> list[FileModel]:
     mediator = Mediator()
     results: list[FileModel] = []
 
     for response in responses:
         command = _build_audit_file_download_command(response)
-        result:dict = mediator.send(command)
+        result = mediator.send(command)
 
         # start with the file model doc and attach inserted_id when available
         response.file_id = result.get("inserted_id")

@@ -99,11 +99,9 @@ def load_credentials(
     )
 
 
-def initialize_google_drive_service(
-    credentials: Credentials | None = None,
-) -> Any:
+def initialize_google_drive_service() -> Any:
     """Build a Google Drive API client from bootstrapped OAuth credentials."""
-    creds = credentials or load_google_drive_credentials()
+    creds = load_google_drive_credentials()
     service = build(
         "drive",
         "v3",
