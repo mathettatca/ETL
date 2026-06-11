@@ -122,9 +122,12 @@ services:
 
   airflow-apiserver:
     <<: *airflow-common
-    command: api-server
+    command:
+      - api-server
     ports:
       - "${AIRFLOW_WEBSERVER_PORT:-8080}:8080"
+    volumes:
+      - ./config/simple_auth_manager_passwords.json:/opt/airflow/config/simple_auth_manager_passwords.json
     restart: always
     depends_on:
       airflow-postgres:

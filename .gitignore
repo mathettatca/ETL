@@ -218,11 +218,6 @@ __marimo__/
 
 uv.lock
 .vscode/settings.json
-building_block/logging/2026-05-31.txt
-building_block/logging/2026-06-01.txt
-building_block/logging/2026-06-02.txt
-building_block/logging/2026-06-03.txt
-building_block/logging/2026-06-04.txt
 pyrightconfig.json
 uv.lock
 .agents/
@@ -233,3 +228,6 @@ test/data
 **/.DS_Store
 test/
 
+src/building_block/google_tokens/
+client_secret.json
+config/simple_auth_manager_passwords.json

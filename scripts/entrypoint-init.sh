@@ -1,74 +1,86 @@
 #!/bin/bash
-# Chạy 1 lần khi airflow-init container start.
-# Migrate DB → tạo admin user → tạo connections → tạo variables.
 set -e
 
 echo "======================================================"
-echo " Airflow Init — STSDataIngestion (local test)"
+echo " Airflow Init — STSDataIngestion"
 echo "======================================================"
 
 echo ""
+echo "--> Validate required environment variables..."
+
+required_vars=(
+  "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN"
+  "AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE"
+  "AIRFLOW_ADMIN_USERNAME"
+  "AIRFLOW_ADMIN_PASSWORD"
+  "AIRFLOW__SMTP__SMTP_HOST"
+  "AIRFLOW__SMTP__SMTP_PORT"
+  "AIRFLOW__SMTP__SMTP_USER"
+  "AIRFLOW__SMTP__SMTP_PASSWORD"
+  "AIRFLOW__SMTP__SMTP_MAIL_FROM"
+  "FAILURE_EMAIL"
+  "PIPELINE_SUMMARY_EMAIL"
+)
+
+for var_name in "${required_vars[@]}"; do
+  if [[ -z "${!var_name:-}" ]]; then
+    echo "Missing required env: ${var_name}" >&2
+    echo "Define it in docker-compose.yml or .env" >&2
+    exit 1
+  fi
+done
+
+echo ""
 echo "--> Configure SimpleAuthManager password file..."
+
 python - <<'PY'
 import json
 import os
 from pathlib import Path
 
-passwords_file = Path(
-    os.getenv(
-        "AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE",
-        "/opt/airflow/config/simple_auth_manager_passwords.json",
-    )
-)
-username = os.getenv("AIRFLOW_ADMIN_USERNAME", "admin")
-password = os.getenv("AIRFLOW_ADMIN_PASSWORD", "admin")
+passwords_file = Path(os.environ["AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE"])
+username = os.environ["AIRFLOW_ADMIN_USERNAME"]
+password = os.environ["AIRFLOW_ADMIN_PASSWORD"]
 
 passwords_file.parent.mkdir(parents=True, exist_ok=True)
-passwords_file.write_text(json.dumps({username: password}), encoding="utf-8")
+passwords_file.write_text(
+    json.dumps({username: password}),
+    encoding="utf-8",
+)
+
+print(f"SimpleAuthManager password file created: {passwords_file}")
+print(f"SimpleAuthManager user: {username}")
 PY
 
 echo ""
 echo "--> Migrate Airflow metadata DB..."
+
 airflow db migrate
 
 echo ""
-echo "--> Create admin user (${AIRFLOW_ADMIN_USERNAME:-admin}/${AIRFLOW_ADMIN_PASSWORD:-admin})..."
-airflow users create \
-  --username "${AIRFLOW_ADMIN_USERNAME:-admin}" \
-  --password "${AIRFLOW_ADMIN_PASSWORD:-admin}" \
-  --firstname "${AIRFLOW_ADMIN_FIRSTNAME:-STS}" \
-  --lastname "${AIRFLOW_ADMIN_LASTNAME:-Admin}" \
-  --role Admin \
-  --email "${AIRFLOW_ADMIN_EMAIL:-admin@stscorp.local}" 2>/dev/null \
-  || echo "    (user '${AIRFLOW_ADMIN_USERNAME:-admin}' already exists, skipping)"
+echo "--> Create smtp_default connection from docker-compose environment..."
 
-echo ""
-echo "--> Create smtp_default connection..."
-
-SMTP_PASSWORD_CLEAN="$(echo "${AIRFLOW__SMTP__SMTP_PASSWORD:-}" | tr -d ' ')"
-SMTP_MAIL_FROM="${AIRFLOW__SMTP__SMTP_MAIL_FROM:-${AIRFLOW__SMTP__SMTP_USER:-}}"
-
-if [[ -z "${AIRFLOW__SMTP__SMTP_USER:-}" || -z "${SMTP_PASSWORD_CLEAN}" || -z "${SMTP_MAIL_FROM}" ]]; then
-  echo "Missing SMTP config. Set AIRFLOW__SMTP__SMTP_USER, AIRFLOW__SMTP__SMTP_PASSWORD, and AIRFLOW__SMTP__SMTP_MAIL_FROM in .env." >&2
-  exit 1
-fi
+SMTP_PASSWORD_CLEAN="$(echo "${AIRFLOW__SMTP__SMTP_PASSWORD}" | tr -d ' ')"
 
 airflow connections delete smtp_default 2>/dev/null || true
+
 airflow connections add smtp_default \
   --conn-type smtp \
-  --conn-host "${AIRFLOW__SMTP__SMTP_HOST:-smtp.gmail.com}" \
+  --conn-host "${AIRFLOW__SMTP__SMTP_HOST}" \
   --conn-login "${AIRFLOW__SMTP__SMTP_USER}" \
   --conn-password "${SMTP_PASSWORD_CLEAN}" \
-  --conn-port "${AIRFLOW__SMTP__SMTP_PORT:-587}" \
-  --conn-extra '{"smtp_starttls": true, "smtp_ssl": false}'
+  --conn-port "${AIRFLOW__SMTP__SMTP_PORT}" \
+  --conn-extra "{\"smtp_starttls\": ${AIRFLOW__SMTP__SMTP_STARTTLS}, \"smtp_ssl\": ${AIRFLOW__SMTP__SMTP_SSL}}"
 
 echo ""
-echo "--> Set Airflow Variables..."
-airflow variables set pipeline_summary_email \
-  "${SMTP_MAIL_FROM}" 2>/dev/null || true
+echo "--> Sync docker-compose email env to Airflow Variables..."
+
+airflow variables set failure_email "${FAILURE_EMAIL}"
+airflow variables set pipeline_summary_email "${PIPELINE_SUMMARY_EMAIL}"
 
 echo ""
 echo "======================================================"
 echo " Init DONE. Airflow is ready."
-echo " UI: http://localhost:8080  (${AIRFLOW_ADMIN_USERNAME:-admin} / ${AIRFLOW_ADMIN_PASSWORD:-admin})"
+echo " UI: http://localhost:8080"
+echo " Login: ${AIRFLOW_ADMIN_USERNAME} / ${AIRFLOW_ADMIN_PASSWORD}"
 echo "======================================================"
