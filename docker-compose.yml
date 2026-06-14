@@ -41,14 +41,9 @@ x-airflow-common:
     POSTGRES_USER: ${APP_POSTGRES_USER:-sts}
     POSTGRES_PASSWORD: ${APP_POSTGRES_PASSWORD:-sts}
     POSTGRES_DB: ${APP_POSTGRES_DB:-sts_beyond}
-    GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-/opt/airflow/client_secret.json}
-    GOOGLE_CREDENTIALS_PATH: ${GOOGLE_CREDENTIALS_PATH:-/opt/airflow/client_secret.json}
-    GOOGLE_TOKEN_PATH: /opt/airflow/google_tokens/client_secret.token.json
+    GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-/opt/airflow/google_tokens/client_secret.json}
+    GOOGLE_CREDENTIALS_PATH: ${GOOGLE_CREDENTIALS_PATH:-/opt/airflow/google_tokens/client_secret.json}
     GOOGLE_DRIVE_BOOTSTRAP_SCRIPT: ${GOOGLE_DRIVE_BOOTSTRAP_SCRIPT:-/opt/airflow/scripts/bootstrap_google_drive.py}
-    GOOGLE_OAUTH_REDIRECT_HOST: ${GOOGLE_OAUTH_REDIRECT_HOST:-localhost}
-    GOOGLE_OAUTH_BIND_ADDR: ${GOOGLE_OAUTH_BIND_ADDR:-0.0.0.0}
-    GOOGLE_OAUTH_REDIRECT_PORT: ${GOOGLE_OAUTH_REDIRECT_PORT:-8090}
-    GOOGLE_OAUTH_OPEN_BROWSER: ${GOOGLE_OAUTH_OPEN_BROWSER:-false}
     FAILURE_EMAIL: ${FAILURE_EMAIL:-khoinm0603@gmail.com}
     PIPELINE_SUMMARY_EMAIL: ${PIPELINE_SUMMARY_EMAIL:-khoinm0603@gmail.com}
     AIRFLOW_ADMIN_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-airflow}
@@ -157,8 +152,6 @@ services:
     <<: *airflow-common
     hostname: airflow-scheduler
     command: scheduler
-    ports:
-      - "${GOOGLE_OAUTH_REDIRECT_PORT:-8090}:8090"
     restart: always
     depends_on:
       airflow-postgres:

@@ -12,19 +12,15 @@ logger = logging.getLogger(__name__)
 
 
 def _load_google_drive_service() -> Any:
-    bootstrap_script_path = Path(
-        os.environ.get(
-            "GOOGLE_DRIVE_BOOTSTRAP_SCRIPT",
-            str(
-                Path(__file__).resolve().parents[2]
-                / "scripts"
-                / "bootstrap_google_drive.py"
-            ),
-        )
+    bootstrap_script_path = Path(str(
+            Path(__file__).resolve().parents[2]
+            / "scripts"
+            / "bootstrap_google_drive.py"
+        ),
     )
     spec = importlib.util.spec_from_file_location(
-        "google_drive_bootstrap",
-        bootstrap_script_path,
+        "bootstrap_google_drive",
+        str(bootstrap_script_path),
     )
     if spec is None or spec.loader is None:
         raise RuntimeError(

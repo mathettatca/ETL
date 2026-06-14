@@ -354,11 +354,12 @@ with DAG(
         task_id="data_pipeline_task",
         bash_command=(
             f"cd {PROJECT_ROOT} && "
+            f"PYTHONUNBUFFERED=1 "
             f"PYTHONPATH={PIPELINE_PYTHONPATH} "
             f"python {PIPELINE_SCRIPT} "
             "--file-source '{{ params.source }}' "
             "--dest-path '{{ params.dest_path }}' "
-            "--google-drive-folder-id '{{ params.google_drive_folder_id }}'"
+            "--file_id '{{ params.google_drive_folder_id }}'"
         ),
     )
     google_drive_sensor >> data_pipeline_task >> summary_email_task
